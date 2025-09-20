@@ -4,6 +4,9 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+derive_more = { version = "0.99.16", default-features = false, features = ["display"] }
 paho-mqtt = { version = "0.13", features = ["build_bindgen","vendored-ssl"] }
 serde = { version = "1.0.225", features = ["derive"] }
+strum = "0.27.2"
+strum_macros = "0.27.2"
 toml = { version = "0.9.7", features = ["parse"] }
