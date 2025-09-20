@@ -1,0 +1,9 @@
+[package]
+name = "yeerugina"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+paho-mqtt = { version = "0.13", features = ["build_bindgen","vendored-ssl"] }
+serde = { version = "1.0.225", features = ["derive"] }
+toml = { version = "0.9.7", features = ["parse"] }
