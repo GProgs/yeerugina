@@ -1,14 +1,33 @@
 extern crate derive_more;
 
 use derive_more::Display;
+use regex::bytes::Regex;
 use serde::Deserialize;
 use std::error::Error;
 use std::fmt;
 use std::io;
+use std::io::Write;
 use std::net::TcpStream;
 use std::time::{SystemTime, UNIX_EPOCH};
 use strum_macros;
 
+/* TODO list here:
+ * - Mark this commit as unlinted, so we need to lint later
+ * - Create some kind of ID for every request
+ *   s.t. we can keep track of success/failed requests
+ *   (this could be of format HHMM, like 1234 for example)
+ * - Create some kind of logic (i.e. separate method etc.) to read responses
+ * - Write the regex for the parse command (see the todo!() macro)
+ * - Actually implement deserialization for Config w/ serde
+ *   s.t. we can read a config.toml file into a Config struct
+ * - (for a lot later) figure out openssl... won't build on my Windows laptop
+ *   because clang lib missing...
+ */
+
+// Just FYI we're deriving Debug for all structs here
+// because that's recommended.
+// Struct field stream is Option<_> because we're not connected
+//   until Lamp.connect() is called.
 #[derive(Debug)]
 pub struct Lamp {
 	name: String,
@@ -30,17 +49,39 @@ impl Lamp {
 		Ok(())
 	}
 
-        pub fn send_cmd(&self, cmd: Command) -> io::Result<()> {
-            if self.stream.is_none() {
+        pub fn send_cmd(&mut self, cmd: Command) -> io::Result<()> {
+            // Use stream instead of self.stream later on.
+            // Return io::Error if not connected yet.
+            // ref mut because shared reference and moves...
+            // let Some(stream) makes the borrow checker cry :'(
+            let Some(ref mut stream) = self.stream else {
                 return Err(io::Error::new(io::ErrorKind::NotConnected,"Lamp is not connected yet"));
-            }
+            };
+            //if self.stream.is_none() {
+            //    return Err(io::Error::new(io::ErrorKind::NotConnected,"Lamp is not connected yet"));
+            //}
+            let req = cmd.to_request();
+            let byte_arr: &[u8] = req.as_bytes();
 
-            let byte_arr: &[u8] = cmd.to_request().as_bytes();
+            stream.write(byte_arr)?;
 
             Ok(())
         }
+
+        // Take in a response from the lamp
+        // Return Ok(None) if succeeded and nothing returned
+        //   (for example, when using set_rgb or toggle)
+        // Ok(String) if get_prop was called and we got values back
+        // Err(String) if something went wrong
+        pub fn parse_response(resp: &[u8]) -> Result<Option<String>,String> {
+            let Ok(re) = Regex::new(todo!()) else {
+                return Err(String::from("Could not create regex"))
+            };
+        }
 }
 
+// Configuration file where we persist info about the lamp
+//   i.e. what its IP is and where our MQTT broker is
 #[derive(Debug,Deserialize)]
 pub struct Config {
 	pub lamp_ip: String,
@@ -54,10 +95,12 @@ impl Config {
 	}
 }
 
-#[derive(Debug,strum_macros::Display)]
+// need default due to EnumString trait bound
+#[derive(Debug,Default,strum_macros::Display,strum_macros::EnumString)]
 #[strum(serialize_all = "lowercase")]
 pub enum Effect {
 	Sudden,
+        #[default]
 	Smooth,
 }
 
@@ -72,7 +115,7 @@ impl fmt::Display for Effect {
 }
 */
 
-#[derive(Debug,strum_macros::Display)]
+#[derive(Debug,strum_macros::Display,strum_macros::EnumString)]
 #[strum(serialize_all = "snake_case")]
 //#[derive(Display)]
 //#[display(fmt = r#"{"id":1,"method":"{}","params":"{}"}"#, )]
