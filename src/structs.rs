@@ -36,7 +36,7 @@ pub struct Lamp {
 	name: String,
 	ip: String,
 	stream: Option<TcpStream>,
-        cmd_count: Wrapping<u8>,
+	cmd_count: Wrapping<u8>,
 }
 
 impl Lamp {
@@ -45,7 +45,7 @@ impl Lamp {
 			name,
 			ip,
 			stream: None,
-                        cmd_count: Wrapping(0u8),
+			cmd_count: Wrapping(0u8),
 		}
 	}
 
@@ -54,41 +54,44 @@ impl Lamp {
 		Ok(())
 	}
 
-        pub fn send_cmd(&mut self, cmd: Command) -> io::Result<()> {
-            // Use stream instead of self.stream later on.
-            // Return io::Error if not connected yet.
-            // ref mut because shared reference and moves...
-            // let Some(stream) makes the borrow checker cry :'(
-            let Some(ref mut stream) = self.stream else {
-                return Err(io::Error::new(io::ErrorKind::NotConnected,"Lamp is not connected yet"));
-            };
-            //if self.stream.is_none() {
-            //    return Err(io::Error::new(io::ErrorKind::NotConnected,"Lamp is not connected yet"));
-            //}
-            let req = cmd.to_request(&(self.cmd_count));
-            let byte_arr: &[u8] = req.as_bytes();
+	pub fn send_cmd(&mut self, cmd: Command) -> io::Result<()> {
+		// Use stream instead of self.stream later on.
+		// Return io::Error if not connected yet.
+		// ref mut because shared reference and moves...
+		// let Some(stream) makes the borrow checker cry :'(
+		let Some(ref mut stream) = self.stream else {
+			return Err(io::Error::new(
+				io::ErrorKind::NotConnected,
+				"Lamp is not connected yet",
+			));
+		};
+		//if self.stream.is_none() {
+		//    return Err(io::Error::new(io::ErrorKind::NotConnected,"Lamp is not connected yet"));
+		//}
+		let req = cmd.to_request(&(self.cmd_count));
+		let byte_arr: &[u8] = req.as_bytes();
 
-            stream.write(byte_arr)?;
-            self.cmd_count += 1;
+		stream.write(byte_arr)?;
+		self.cmd_count += 1;
 
-            Ok(())
-        }
+		Ok(())
+	}
 
-        // Take in a response from the lamp
-        // Return Ok(None) if succeeded and nothing returned
-        //   (for example, when using set_rgb or toggle)
-        // Ok(String) if get_prop was called and we got values back
-        // Err(String) if something went wrong
-        pub fn parse_response(resp: &[u8]) -> Result<Option<String>,String> {
-            let Ok(re) = Regex::new(todo!()) else {
-                return Err(String::from("Could not create regex"))
-            };
-        }
+	// Take in a response from the lamp
+	// Return Ok(None) if succeeded and nothing returned
+	//   (for example, when using set_rgb or toggle)
+	// Ok(String) if get_prop was called and we got values back
+	// Err(String) if something went wrong
+	pub fn parse_response(resp: &[u8]) -> Result<Option<String>, String> {
+		let Ok(re) = Regex::new(todo!()) else {
+			return Err(String::from("Could not create regex"));
+		};
+	}
 }
 
 // Configuration file where we persist info about the lamp
 //   i.e. what its IP is and where our MQTT broker is
-#[derive(Debug,Deserialize)]
+#[derive(Debug, Deserialize)]
 pub struct Config {
 	pub lamp_ip: String,
 	pub mqtt_addr: String,
@@ -102,11 +105,11 @@ impl Config {
 }
 
 // need default due to EnumString trait bound
-#[derive(Debug,Default,strum_macros::Display,strum_macros::EnumString)]
+#[derive(Debug, Default, strum_macros::Display, strum_macros::EnumString)]
 #[strum(serialize_all = "lowercase")]
 pub enum Effect {
 	Sudden,
-        #[default]
+	#[default]
 	Smooth,
 }
 
@@ -121,7 +124,7 @@ impl fmt::Display for Effect {
 }
 */
 
-#[derive(Debug,strum_macros::Display,strum_macros::EnumString)]
+#[derive(Debug, strum_macros::Display, strum_macros::EnumString)]
 #[strum(serialize_all = "snake_case")]
 //#[derive(Display)]
 //#[display(fmt = r#"{"id":1,"method":"{}","params":"{}"}"#, )]
@@ -132,7 +135,7 @@ pub enum Command {
 	SetHsv(u8, u8, Effect, usize),
 	SetBright(u8, Effect, usize),
 	SetPower(bool, Effect, usize, Option<usize>),
-        Toggle,
+	Toggle,
 }
 
 impl Command {
@@ -151,18 +154,22 @@ impl Command {
 			Command::SetRgb(rgb, eff, dur) => format!(r#"{},"{}",{}"#, rgb, eff, dur),
 			Command::SetHsv(hue, sat, eff, dur) => format!(r#"{},{},"{}",{}"#, hue, sat, eff, dur),
 			Command::SetBright(bri, eff, dur) => format!(r#"{},"{}",{}"#, bri, eff, dur),
-			Command::SetPower(pow, eff, dur, maybe_mod) => { // handle optional
+			Command::SetPower(pow, eff, dur, maybe_mod) => {
+				// handle optional
 				let mode = maybe_mod.unwrap_or_default(); // can't use mod
 				format!(r#"{},{},"{}",{}"#, pow, eff, dur, mode)
 			},
-                        Command::Toggle => String::new(),
+			Command::Toggle => String::new(),
 		};
-                //let now = UtcDateTime::now(); // Alternative - let the send_cmd() method handle the
-                                              // ID stuff. Besides, it needs to verify that the
-                                              // command worked (or not).
-                //let id: String = format!("{}{}{}",now.hour(),now.minute(),now.second());
-                // Construct the request, adding \r\n to the end
-		format!(concat!(r#"{{"id":{},"method":"{}","params":[{}]}}"#,"\r\n"), id.0, self, param_part)
+		//let now = UtcDateTime::now(); // Alternative - let the send_cmd() method handle the
+		// ID stuff. Besides, it needs to verify that the
+		// command worked (or not).
+		//let id: String = format!("{}{}{}",now.hour(),now.minute(),now.second());
+		// Construct the request, adding \r\n to the end
+		format!(
+			concat!(r#"{{"id":{},"method":"{}","params":[{}]}}"#, "\r\n"),
+			id.0, self, param_part
+		)
 	}
 }
 
