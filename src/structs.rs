@@ -1,19 +1,21 @@
-extern crate derive_more;
+//extern crate derive_more;
 
-use derive_more::Display;
+//use derive_more::Display;
 use regex::bytes::Regex;
 use serde::Deserialize;
+//use time::UtcDateTime;
 use std::error::Error;
 use std::fmt;
 use std::io;
 use std::io::Write;
 use std::net::TcpStream;
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::num::Wrapping;
+//use std::time::{SystemTime, UNIX_EPOCH};
 use strum_macros;
 
 /* TODO list here:
  * - Mark this commit as unlinted, so we need to lint later
- * - Create some kind of ID for every request
+ * - DONE Create some kind of ID for every request
  *   s.t. we can keep track of success/failed requests
  *   (this could be of format HHMM, like 1234 for example)
  * - Create some kind of logic (i.e. separate method etc.) to read responses
@@ -28,11 +30,13 @@ use strum_macros;
 // because that's recommended.
 // Struct field stream is Option<_> because we're not connected
 //   until Lamp.connect() is called.
+// Using a counter that wraps around.
 #[derive(Debug)]
 pub struct Lamp {
 	name: String,
 	ip: String,
 	stream: Option<TcpStream>,
+        cmd_count: Wrapping<u8>,
 }
 
 impl Lamp {
@@ -41,6 +45,7 @@ impl Lamp {
 			name,
 			ip,
 			stream: None,
+                        cmd_count: Wrapping(0u8),
 		}
 	}
 
@@ -60,10 +65,11 @@ impl Lamp {
             //if self.stream.is_none() {
             //    return Err(io::Error::new(io::ErrorKind::NotConnected,"Lamp is not connected yet"));
             //}
-            let req = cmd.to_request();
+            let req = cmd.to_request(&(self.cmd_count));
             let byte_arr: &[u8] = req.as_bytes();
 
             stream.write(byte_arr)?;
+            self.cmd_count += 1;
 
             Ok(())
         }
@@ -130,7 +136,7 @@ pub enum Command {
 }
 
 impl Command {
-	pub fn to_request(&self) -> String {
+	pub fn to_request<T: fmt::Display>(&self, id: &Wrapping<T>) -> String {
 		//let param_part = match self {
 		//    GetProp(ps) => ps.to_string(), // unwrap Vec from GetProp
 		//};
@@ -151,8 +157,12 @@ impl Command {
 			},
                         Command::Toggle => String::new(),
 		};
-                // Construct the final request, adding \r\n to the end
-		format!(concat!(r#"{{"id":1,"method":"{}","params":[{}]}}"#,"\r\n"), self, param_part)
+                //let now = UtcDateTime::now(); // Alternative - let the send_cmd() method handle the
+                                              // ID stuff. Besides, it needs to verify that the
+                                              // command worked (or not).
+                //let id: String = format!("{}{}{}",now.hour(),now.minute(),now.second());
+                // Construct the request, adding \r\n to the end
+		format!(concat!(r#"{{"id":{},"method":"{}","params":[{}]}}"#,"\r\n"), id.0, self, param_part)
 	}
 }
 

@@ -4,10 +4,11 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-derive_more = { version = "0.99.16", default-features = false, features = ["display"] }
+#derive_more = { version = "0.99.16", default-features = false, features = ["display"] }
 #paho-mqtt = { version = "0.13", features = ["build_bindgen","vendored-ssl"] }
 regex = "1.11.2"
 serde = { version = "1.0.225", features = ["derive"] }
 strum = "0.27.2"
 strum_macros = "0.27.2"
+#time = { version = "0.3.44", features = ["formatting"] }
 toml = { version = "0.9.7", features = ["parse"] }

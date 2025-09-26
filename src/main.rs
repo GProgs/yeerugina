@@ -9,10 +9,12 @@ fn main() {
 			.collect(),
 	);
         let cmd2 = Command::Toggle;
+        let mut counter = std::num::Wrapping(254u8);
 	println!("Command is {}", cmd);
 	if let Command::GetProp(vals) = &cmd {
 		println!("Command field is {:?}", vals);
 	}
-	println!("to_command is {}", cmd.to_request());
-        println!("to_request for cmd2 is {}", cmd2.to_request());
+	println!("to_command is {}", cmd.to_request(&counter));
+        counter += 2;
+        println!("to_request for cmd2 is {}", cmd2.to_request(&counter));
 }
