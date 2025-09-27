@@ -1,15 +1,10 @@
 //extern crate derive_more;
 
 //use derive_more::Display;
-use regex::bytes::Regex;
 use serde::Deserialize;
 //use time::UtcDateTime;
 use std::error::Error;
-use std::fmt;
-use std::io;
-use std::io::Write;
-use std::net::TcpStream;
-use std::num::Wrapping;
+
 //use std::time::{SystemTime, UNIX_EPOCH};
 use strum_macros;
 
@@ -31,6 +26,7 @@ use strum_macros;
 // Struct field stream is Option<_> because we're not connected
 //   until Lamp.connect() is called.
 // Using a counter that wraps around.
+/*
 #[derive(Debug)]
 pub struct Lamp {
 	name: String,
@@ -88,6 +84,7 @@ impl Lamp {
 		};
 	}
 }
+*/
 
 // Configuration file where we persist info about the lamp
 //   i.e. what its IP is and where our MQTT broker is
@@ -139,7 +136,7 @@ pub enum Command {
 }
 
 impl Command {
-	pub fn to_request<T: fmt::Display>(&self, id: &Wrapping<T>) -> String {
+	pub fn to_request(&self, id: u8) -> String {
 		//let param_part = match self {
 		//    GetProp(ps) => ps.to_string(), // unwrap Vec from GetProp
 		//};
@@ -168,7 +165,7 @@ impl Command {
 		// Construct the request, adding \r\n to the end
 		format!(
 			concat!(r#"{{"id":{},"method":"{}","params":[{}]}}"#, "\r\n"),
-			id.0, self, param_part
+			id, self, param_part
 		)
 	}
 }

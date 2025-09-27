@@ -1,3 +1,4 @@
+//use yeerugina::lamp::Lamp;
 use yeerugina::structs::Command;
 
 fn main() {
@@ -14,7 +15,7 @@ fn main() {
 	if let Command::GetProp(vals) = &cmd {
 		println!("Command field is {:?}", vals);
 	}
-	println!("to_command is {}", cmd.to_request(&counter));
+	println!("to_command is {}", cmd.to_request(counter.0));
 	counter += 2;
-	println!("to_request for cmd2 is {}", cmd2.to_request(&counter));
+	println!("to_request for cmd2 is {}", cmd2.to_request(counter.0));
 }
