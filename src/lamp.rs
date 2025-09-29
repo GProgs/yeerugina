@@ -12,28 +12,30 @@ use std::net::TcpStream;
 // Using a counter that wraps around.
 #[derive(Debug)]
 pub struct Lamp {
-	name: String,
+	_name: String,
 	ip: String,
 	stream: Option<TcpStream>,
 	cmd_count: u8,
 }
 
 impl Lamp {
-	pub fn new(name: String, ip: String) -> Self {
+	pub fn new(_name: String, ip: String) -> Self {
 		Self {
-			name,
+			_name,
 			ip,
 			stream: None,
 			cmd_count: 0u8,
 		}
 	}
 
+        // Try to connect to the lamp, returning a Result.
 	pub fn connect(&mut self) -> io::Result<()> {
 		self.stream = Some(TcpStream::connect(&self.ip)?);
 		Ok(())
 	}
 
-	pub fn send_cmd(&mut self, cmd: Command) -> io::Result<()> {
+        // Try to send a command, returning the ID of said command.
+	pub fn send_cmd(&mut self, cmd: Command) -> io::Result<u8> {
 		// Use stream instead of self.stream later on.
 		// Return io::Error if not connected yet.
 		// ref mut because shared reference and moves...
@@ -44,15 +46,17 @@ impl Lamp {
 				"Lamp is not connected yet",
 			));
 		};
+                // Get the ID for the message
+                let id = self.cmd_count;
 		// Construct message bytes
-		let req = cmd.to_request(self.cmd_count);
+		let req = cmd.to_request(id);
 		let byte_arr: &[u8] = req.as_bytes();
 		// Output and increment counter
-		stream.write(byte_arr)?;
+		stream.write_all(byte_arr)?;
 		//self.cmd_count += 1;
 		self.cmd_count = self.cmd_count.wrapping_add(1);
 
-		Ok(())
+		Ok(id)
 	}
 
 	// Check that resp corresponds to the most recent command submitted to this lamp.
@@ -64,7 +68,7 @@ impl Lamp {
 		//};
 
 		// Match the response, then Option -> Result<...,&str>
-		let cap = re.captures(resp).ok_or_else(|| "No ID match found")?;
+		let cap = re.captures(resp).ok_or("No ID match found")?;
 		let (_, [resp_id_bytes]) = cap.extract();
 		//let resp_id = str::from_utf8(resp_id_bytes).map(|b| b.parse::<u8>()).map_err(|e| e.to_string());
 		let resp_id = (str::from_utf8(resp_id_bytes).map_err(|e| e.to_string())?)
