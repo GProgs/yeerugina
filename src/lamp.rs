@@ -15,7 +15,7 @@ pub struct Lamp {
 	name: String,
 	ip: String,
 	stream: Option<TcpStream>,
-        cmd_count: u8,
+	cmd_count: u8,
 }
 
 impl Lamp {
@@ -44,15 +44,34 @@ impl Lamp {
 				"Lamp is not connected yet",
 			));
 		};
-                // Construct message bytes
+		// Construct message bytes
 		let req = cmd.to_request(self.cmd_count);
 		let byte_arr: &[u8] = req.as_bytes();
-                // Output and increment counter
+		// Output and increment counter
 		stream.write(byte_arr)?;
 		//self.cmd_count += 1;
-                self.cmd_count = self.cmd_count.wrapping_add(1);
+		self.cmd_count = self.cmd_count.wrapping_add(1);
 
 		Ok(())
+	}
+
+	// Check that resp corresponds to the most recent command submitted to this lamp.
+	pub fn is_latest_cmd(&self, resp: &[u8]) -> Result<bool, String> {
+		// map_err replaces let-else construction
+		let re = Regex::new(r#""id":\d+"#).map_err(|e| e.to_string())?;
+		//let Ok(re) = Regex::new(r#""id":\d+"#) else {
+		//	return Err(String::from("Could not create regex"));
+		//};
+
+		// Match the response, then Option -> Result<...,&str>
+		let cap = re.captures(resp).ok_or_else(|| "No ID match found")?;
+		let (_, [resp_id_bytes]) = cap.extract();
+		//let resp_id = str::from_utf8(resp_id_bytes).map(|b| b.parse::<u8>()).map_err(|e| e.to_string());
+		let resp_id = (str::from_utf8(resp_id_bytes).map_err(|e| e.to_string())?)
+			.parse::<u8>()
+			.map_err(|e| e.to_string())?;
+
+		Ok(resp_id == self.cmd_count.wrapping_sub(1))
 	}
 
 	// Take in a response from the lamp
@@ -66,4 +85,3 @@ impl Lamp {
 		};
 	}
 }
-
