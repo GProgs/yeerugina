@@ -1,0 +1,8 @@
+[lamp]
+ip = "127.0.0.1:1234"
+default-duration = "500ms"
+
+[mqtt]
+ip = "127.0.0.1:1111"
+topic = "foobar"
+lwt-payload = "goodbye"

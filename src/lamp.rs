@@ -28,13 +28,13 @@ impl Lamp {
 		}
 	}
 
-        // Try to connect to the lamp, returning a Result.
+	// Try to connect to the lamp, returning a Result.
 	pub fn connect(&mut self) -> io::Result<()> {
 		self.stream = Some(TcpStream::connect(&self.ip)?);
 		Ok(())
 	}
 
-        // Try to send a command, returning the ID of said command.
+	// Try to send a command, returning the ID of said command.
 	pub fn send_cmd(&mut self, cmd: Command) -> io::Result<u8> {
 		// Use stream instead of self.stream later on.
 		// Return io::Error if not connected yet.
@@ -46,8 +46,8 @@ impl Lamp {
 				"Lamp is not connected yet",
 			));
 		};
-                // Get the ID for the message
-                let id = self.cmd_count;
+		// Get the ID for the message
+		let id = self.cmd_count;
 		// Construct message bytes
 		let req = cmd.to_request(id);
 		let byte_arr: &[u8] = req.as_bytes();

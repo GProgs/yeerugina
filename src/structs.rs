@@ -1,11 +1,6 @@
-//extern crate derive_more;
-
-//use derive_more::Display;
 use serde::Deserialize;
-//use time::UtcDateTime;
-use std::error::Error;
-
-//use std::time::{SystemTime, UNIX_EPOCH};
+use std::net::SocketAddr;
+use std::time::Duration;
 use strum_macros;
 
 /* TODO list here:
@@ -23,22 +18,35 @@ use strum_macros;
 
 // Just FYI we're deriving Debug for all structs here
 // because that's recommended.
-// Struct field stream is Option<_> because we're not connected
-//   until Lamp.connect() is called.
-// Using a counter that wraps around.
 
 // Configuration file where we persist info about the lamp
 //   i.e. what its IP is and where our MQTT broker is
 #[derive(Debug, Deserialize)]
 pub struct Config {
-	pub lamp_ip: String,
-	pub mqtt_addr: String,
+	pub lamp: LampConfig,
+	pub mqtt: MqttConfig,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename = "lamp", rename_all = "kebab-case")]
+pub struct LampConfig {
+	pub ip: SocketAddr,
+	#[serde(with = "humantime_serde")]
+	pub default_duration: Duration,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename = "mqtt", rename_all = "kebab-case")]
+pub struct MqttConfig {
+	pub ip: SocketAddr,
+	pub topic: String,
+	pub lwt_payload: String,
 }
 
 impl Config {
-	pub fn read_file(path: String) -> Result<Self, Box<dyn Error>> {
-		let cont = std::fs::read_to_string(path)?;
-		Ok(toml::from_str(&cont)?)
+	pub fn read_file(path: String) -> Result<Self, String> {
+		let cont = std::fs::read_to_string(path).map_err(|e| e.to_string())?;
+		toml::from_str(&cont).map_err(|e| e.to_string())
 	}
 }
 

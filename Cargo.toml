@@ -5,10 +5,11 @@ edition = "2024"
 
 [dependencies]
 env_logger = "0.11.8"
+humantime-serde = "1.1.1"
 log = "0.4.28"
 paho-mqtt = "0.13.3"
 regex = "1.11.2"
-serde = { version = "1.0.225", features = ["derive"] }
+serde = { version = "1.0.228", features = ["derive"] }
 strum = "0.27.2"
 strum_macros = "0.27.2"
 toml = { version = "0.9.7", features = ["parse"] }
