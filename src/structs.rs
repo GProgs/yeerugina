@@ -4,14 +4,8 @@ use std::time::Duration;
 use strum_macros;
 
 /* TODO list here:
- * - Mark this commit as unlinted, so we need to lint later
- * - DONE Create some kind of ID for every request
- *   s.t. we can keep track of success/failed requests
- *   (this could be of format HHMM, like 1234 for example)
  * - Create some kind of logic (i.e. separate method etc.) to read responses
  * - Write the regex for the parse command (see the todo!() macro)
- * - Actually implement deserialization for Config w/ serde
- *   s.t. we can read a config.toml file into a Config struct
  * - (for a lot later) figure out openssl... won't build on my Windows laptop
  *   because clang lib missing...
  */
@@ -33,6 +27,17 @@ pub struct LampConfig {
 	pub ip: SocketAddr,
 	#[serde(with = "humantime_serde")]
 	pub default_duration: Duration,
+        #[serde(with = "humantime_serde", default = "default_timeout")]
+        pub read_timeout: Option<Duration>,
+        #[serde(with = "humantime_serde", default = "default_timeout")]
+        pub write_timeout: Option<Duration>,
+}
+// {read,write}_timeout: None means calls should block indefinitely.
+
+// Use 5 secs if the user doesn't give another value.
+// This is for the TcpStream inside of Lamp
+fn default_timeout() -> Option<Duration> {
+    Some(Duration::from_secs(5))
 }
 
 #[derive(Debug, Deserialize)]

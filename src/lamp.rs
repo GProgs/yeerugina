@@ -1,15 +1,16 @@
 use crate::structs::Command;
+use log::warn;
 use regex::bytes::Regex;
 use std::io;
 use std::io::Write;
 use std::net::TcpStream;
+use std::time::Duration;
 //use yeerugina::structs::*;
 
 // Just FYI we're deriving Debug for all structs here
 // because that's recommended.
-// Struct field stream is Option<_> because we're not connected
-//   until Lamp.connect() is called.
-// Using a counter that wraps around.
+// Stream is an Option because we're not connected initially.
+// Using a counter that wraps around (wrapping_add)
 #[derive(Debug)]
 pub struct Lamp {
 	_name: String,
@@ -29,8 +30,17 @@ impl Lamp {
 	}
 
 	// Try to connect to the lamp, returning a Result.
-	pub fn connect(&mut self) -> io::Result<()> {
+        // If successful, the Result will contain the read and write timeouts of the lamp.
+        // None means the call blocks indefinitely.
+	pub fn connect(&mut self, timeouts: (Option<Duration>,Option<Duration>)) -> io::Result<(Option<Duration>,Option<Duration>)> {
 		self.stream = Some(TcpStream::connect(&self.ip)?);
+                // Using unwrap() since we just defined self.stream = Some(...)
+                if let Err(e) = self.stream.unwrap().set_read_timeout(timeouts.0) {
+                    warn!("Could not set TcpStream read timeout: {e}");
+                };
+                if let Err(e) = self.stream.unwrap().set_write_timeout(timeouts.1) {
+                    warn!("Could not set TcpStream write timeout: {e}");
+                };
 		Ok(())
 	}
 
@@ -63,14 +73,9 @@ impl Lamp {
 	pub fn is_latest_cmd(&self, resp: &[u8]) -> Result<bool, String> {
 		// map_err replaces let-else construction
 		let re = Regex::new(r#""id":\d+"#).map_err(|e| e.to_string())?;
-		//let Ok(re) = Regex::new(r#""id":\d+"#) else {
-		//	return Err(String::from("Could not create regex"));
-		//};
-
 		// Match the response, then Option -> Result<...,&str>
 		let cap = re.captures(resp).ok_or("No ID match found")?;
 		let (_, [resp_id_bytes]) = cap.extract();
-		//let resp_id = str::from_utf8(resp_id_bytes).map(|b| b.parse::<u8>()).map_err(|e| e.to_string());
 		let resp_id = (str::from_utf8(resp_id_bytes).map_err(|e| e.to_string())?)
 			.parse::<u8>()
 			.map_err(|e| e.to_string())?;
@@ -84,8 +89,9 @@ impl Lamp {
 	// Ok(String) if get_prop was called and we got values back
 	// Err(String) if something went wrong
 	pub fn parse_response(resp: &[u8]) -> Result<Option<String>, String> {
-		let Ok(re) = Regex::new(todo!()) else {
-			return Err(String::from("Could not create regex"));
-		};
+                todo!()
+		//let Ok(re) = Regex::new(todo!()) else {
+		//	return Err(String::from("Could not create regex"));
+		//};
 	}
 }

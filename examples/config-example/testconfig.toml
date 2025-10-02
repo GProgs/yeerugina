@@ -1,6 +1,8 @@
 [lamp]
 ip = "127.0.0.1:1234"
 default-duration = "500ms"
+read-timeout = "None"
+write-timeout = "Some(800ms")
 
 [mqtt]
 ip = "127.0.0.1:1111"
