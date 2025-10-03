@@ -27,9 +27,9 @@ pub struct LampConfig {
 	pub ip: SocketAddr,
 	#[serde(with = "humantime_serde")]
 	pub default_duration: Duration,
-	#[serde(with = "humantime_serde", default = "default_timeout")]
+	#[serde(deserialize_with = "humantime_serde_opt", default = "default_timeout")]
 	pub read_timeout: Option<Duration>,
-	#[serde(with = "humantime_serde", default = "default_timeout")]
+	#[serde(deserialize_with = "humantime_serde_opt", default = "default_timeout")]
 	pub write_timeout: Option<Duration>,
 }
 // {read,write}_timeout: None means calls should block indefinitely.
@@ -38,6 +38,14 @@ pub struct LampConfig {
 // This is for the TcpStream inside of Lamp
 fn default_timeout() -> Option<Duration> {
 	Some(Duration::from_secs(5))
+}
+
+// Custom deserializer function for Option<Duration>
+fn humantime_serde_opt<'de, D>(deserializer: D) -> Result<Option<Duration>, D::Error>
+where
+    D: serde::Deserializer<'de>
+{
+    todo!()
 }
 
 #[derive(Debug, Deserialize)]
@@ -64,17 +72,6 @@ pub enum Effect {
 	Smooth,
 }
 
-/*
-impl fmt::Display for Effect {
-	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-		write!(f,"{}",match self {
-			Effect::Sudden => "sudden",
-			Effect::Smooth => "smooth",
-		})
-	}
-}
-*/
-
 #[derive(Debug, strum_macros::Display, strum_macros::EnumString)]
 #[strum(serialize_all = "snake_case")]
 //#[derive(Display)]
@@ -91,10 +88,6 @@ pub enum Command {
 
 impl Command {
 	pub fn to_request(&self, id: u8) -> String {
-		//let param_part = match self {
-		//    GetProp(ps) => ps.to_string(), // unwrap Vec from GetProp
-		//};
-
 		// Create a comma-separated list of parameters.
 		// For example, "on","smooth",500
 		// or 60,30,"sudden"
