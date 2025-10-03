@@ -1,3 +1,4 @@
+use log::info;
 use serde::Deserialize;
 use std::net::SocketAddr;
 use std::time::Duration;
@@ -27,25 +28,49 @@ pub struct LampConfig {
 	pub ip: SocketAddr,
 	#[serde(with = "humantime_serde")]
 	pub default_duration: Duration,
-	#[serde(deserialize_with = "humantime_serde_opt", default = "default_timeout")]
+	#[serde(
+		deserialize_with = "humantime_serde_opt",
+		default = "default_timeout_opt"
+	)]
 	pub read_timeout: Option<Duration>,
-	#[serde(deserialize_with = "humantime_serde_opt", default = "default_timeout")]
+	#[serde(
+		deserialize_with = "humantime_serde_opt",
+		default = "default_timeout_opt"
+	)]
 	pub write_timeout: Option<Duration>,
+	pub connection_tries: u8,
+	#[serde(with = "humantime_serde", default = "default_wait")]
+	pub connection_tries_wait: Duration,
+	#[serde(with = "humantime_serde", default = "default_wait")]
+	pub connection_timeout: Duration,
 }
 // {read,write}_timeout: None means calls should block indefinitely.
 
 // Use 5 secs if the user doesn't give another value.
+// This is for Lamp.connect(...,conn_wait,...,conn_timeout)
+fn default_wait() -> Duration {
+	Duration::from_secs(5)
+}
+
 // This is for the TcpStream inside of Lamp
-fn default_timeout() -> Option<Duration> {
+fn default_timeout_opt() -> Option<Duration> {
 	Some(Duration::from_secs(5))
 }
 
 // Custom deserializer function for Option<Duration>
 fn humantime_serde_opt<'de, D>(deserializer: D) -> Result<Option<Duration>, D::Error>
 where
-    D: serde::Deserializer<'de>
+	D: serde::Deserializer<'de>,
 {
-    todo!()
+	let opt = Option::<String>::deserialize(deserializer)?;
+	info!("Deserialized option {opt:?}");
+	match opt {
+		None => Ok(None), // don't care, will be replaced by default_timeout()
+		Some(s) if s.is_empty() => Ok(None), // this one will actually be None
+		Some(s) => humantime::parse_duration(&s)
+			.map(Some)
+			.map_err(serde::de::Error::custom),
+	}
 }
 
 #[derive(Debug, Deserialize)]

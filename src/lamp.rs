@@ -3,7 +3,7 @@ use log::{info, warn};
 use regex::bytes::Regex;
 use std::io;
 use std::io::Write;
-use std::net::TcpStream;
+use std::net::{SocketAddr, TcpStream};
 use std::time::Duration;
 //use yeerugina::structs::*;
 
@@ -33,26 +33,56 @@ impl Lamp {
 	// If successful, the Result will contain the read and write timeouts of the lamp.
 	// None means the call blocks indefinitely.
 	pub fn connect(
-		&mut self, timeouts: (Option<Duration>, Option<Duration>),
+		&mut self, read_write_timeouts: (Option<Duration>, Option<Duration>), conn_tries: u8,
+		conn_wait: Duration, conn_timeout: Duration,
 	) -> io::Result<(Option<Duration>, Option<Duration>)> {
-		self.stream = Some(TcpStream::connect(&self.ip)?);
+		if conn_timeout.is_zero() {
+			return Err(io::Error::new(
+				io::ErrorKind::InvalidInput,
+				"conn_timeout cannot be zero",
+			));
+		};
+		let mut try_counter = 0u8;
+		let addr: SocketAddr = self.ip.parse().map_err(|_| {
+			io::Error::new(io::ErrorKind::InvalidInput, "Could not parse given address")
+		})?;
+		loop {
+			info!("Start connection attempt loop");
+			let maybe_stream = TcpStream::connect_timeout(&addr, conn_timeout);
+			try_counter += 1;
+			match maybe_stream {
+				Ok(stream) => {
+					self.stream = Some(stream);
+					break;
+				},
+				Err(e) if try_counter < conn_tries => {
+					warn!("Connection failed (try {try_counter}/{conn_tries}): {e}");
+					std::thread::sleep(conn_wait);
+				},
+				Err(e) => {
+					warn!("Could not connect after {try_counter}/{conn_tries} tries; giving up");
+					return Err(e);
+				},
+			};
+		}
+		//self.stream = Some(TcpStream::connect(&self.ip)?);
 		// Using unwrap() since we just defined self.stream = Some(...)
 		let stream: &mut TcpStream = self
 			.stream
 			.as_mut()
 			.expect("Could not get mutable ref to stream");
 		// Try to set the read and write timeouts
-		if let Err(e) = stream.set_read_timeout(timeouts.0) {
+		if let Err(e) = stream.set_read_timeout(read_write_timeouts.0) {
 			warn!("Could not set TcpStream read timeout: {e}");
 		};
-		if let Err(e) = stream.set_write_timeout(timeouts.1) {
+		if let Err(e) = stream.set_write_timeout(read_write_timeouts.1) {
 			warn!("Could not set TcpStream write timeout: {e}");
 		};
 		// Get the values for the timeouts here
-                // Note that if both operations fail
-                // only the read_timeout failure will be propagated
-                Ok((stream.read_timeout()?, stream.write_timeout()?))
-                /*
+		// Note that if both operations fail
+		// only the read_timeout failure will be propagated
+		Ok((stream.read_timeout()?, stream.write_timeout()?))
+		/*
 		match (stream.read_timeout(), stream.write_timeout()) {
 			(Ok(rt), Ok(wt)) => Ok((rt, wt)),
 			(Err(er), Err(ew)) => {
@@ -69,7 +99,7 @@ impl Lamp {
 				Err(ew)
 			},
 		}
-                */
+				*/
 	}
 
 	// Try to send a command, returning the ID of said command.

@@ -3,17 +3,18 @@ use yeerugina::lamp::Lamp;
 use yeerugina::structs::{Command, Effect};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
+	env_logger::init();
 	// Create and connect to lamp
 	let mut lamp = Lamp::new(
 		String::from("Livingroom"),
 		String::from("192.168.1.3:55443"),
 	);
-        // Define timeouts here
-        let timeouts = (
-            Some(time::Duration::from_secs(3)),
-            None,
-        );
-	lamp.connect(timeouts)?;
+	// Define timeouts here
+	let rw_timeouts = (Some(time::Duration::from_secs(3)), None);
+	let conn_tries = 5u8;
+	let conn_wait = rw_timeouts.0.unwrap();
+	let conn_timeout = rw_timeouts.0.unwrap();
+	lamp.connect(rw_timeouts, conn_tries, conn_wait, conn_timeout)?;
 
 	// Create commands
 	//let cmd = Command::GetProp(vec![
