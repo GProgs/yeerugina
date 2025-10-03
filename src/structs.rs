@@ -27,17 +27,17 @@ pub struct LampConfig {
 	pub ip: SocketAddr,
 	#[serde(with = "humantime_serde")]
 	pub default_duration: Duration,
-        #[serde(with = "humantime_serde", default = "default_timeout")]
-        pub read_timeout: Option<Duration>,
-        #[serde(with = "humantime_serde", default = "default_timeout")]
-        pub write_timeout: Option<Duration>,
+	#[serde(with = "humantime_serde", default = "default_timeout")]
+	pub read_timeout: Option<Duration>,
+	#[serde(with = "humantime_serde", default = "default_timeout")]
+	pub write_timeout: Option<Duration>,
 }
 // {read,write}_timeout: None means calls should block indefinitely.
 
 // Use 5 secs if the user doesn't give another value.
 // This is for the TcpStream inside of Lamp
 fn default_timeout() -> Option<Duration> {
-    Some(Duration::from_secs(5))
+	Some(Duration::from_secs(5))
 }
 
 #[derive(Debug, Deserialize)]

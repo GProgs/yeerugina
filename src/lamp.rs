@@ -1,5 +1,5 @@
 use crate::structs::Command;
-use log::warn;
+use log::{info, warn};
 use regex::bytes::Regex;
 use std::io;
 use std::io::Write;
@@ -30,18 +30,46 @@ impl Lamp {
 	}
 
 	// Try to connect to the lamp, returning a Result.
-        // If successful, the Result will contain the read and write timeouts of the lamp.
-        // None means the call blocks indefinitely.
-	pub fn connect(&mut self, timeouts: (Option<Duration>,Option<Duration>)) -> io::Result<(Option<Duration>,Option<Duration>)> {
+	// If successful, the Result will contain the read and write timeouts of the lamp.
+	// None means the call blocks indefinitely.
+	pub fn connect(
+		&mut self, timeouts: (Option<Duration>, Option<Duration>),
+	) -> io::Result<(Option<Duration>, Option<Duration>)> {
 		self.stream = Some(TcpStream::connect(&self.ip)?);
-                // Using unwrap() since we just defined self.stream = Some(...)
-                if let Err(e) = self.stream.unwrap().set_read_timeout(timeouts.0) {
-                    warn!("Could not set TcpStream read timeout: {e}");
-                };
-                if let Err(e) = self.stream.unwrap().set_write_timeout(timeouts.1) {
-                    warn!("Could not set TcpStream write timeout: {e}");
-                };
-		Ok(())
+		// Using unwrap() since we just defined self.stream = Some(...)
+		let stream: &mut TcpStream = self
+			.stream
+			.as_mut()
+			.expect("Could not get mutable ref to stream");
+		// Try to set the read and write timeouts
+		if let Err(e) = stream.set_read_timeout(timeouts.0) {
+			warn!("Could not set TcpStream read timeout: {e}");
+		};
+		if let Err(e) = stream.set_write_timeout(timeouts.1) {
+			warn!("Could not set TcpStream write timeout: {e}");
+		};
+		// Get the values for the timeouts here
+                // Note that if both operations fail
+                // only the read_timeout failure will be propagated
+                Ok((stream.read_timeout()?, stream.write_timeout()?))
+                /*
+		match (stream.read_timeout(), stream.write_timeout()) {
+			(Ok(rt), Ok(wt)) => Ok((rt, wt)),
+			(Err(er), Err(ew)) => {
+				warn!("Reading timeouts failed; read {er}, write {ew}");
+				info!("Returning only read timeout error");
+				Err(er)
+			},
+			(Err(er), _) => {
+				warn!("Reading read timeout failed; {er}");
+				Err(er)
+			},
+			(_, Err(ew)) => {
+				warn!("Reading write timeout failed; {ew}");
+				Err(ew)
+			},
+		}
+                */
 	}
 
 	// Try to send a command, returning the ID of said command.
@@ -89,7 +117,7 @@ impl Lamp {
 	// Ok(String) if get_prop was called and we got values back
 	// Err(String) if something went wrong
 	pub fn parse_response(resp: &[u8]) -> Result<Option<String>, String> {
-                todo!()
+		todo!()
 		//let Ok(re) = Regex::new(todo!()) else {
 		//	return Err(String::from("Could not create regex"));
 		//};
