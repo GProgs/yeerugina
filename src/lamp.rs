@@ -3,7 +3,7 @@ use log::{info, warn};
 use regex::bytes::Regex;
 use std::io;
 use std::io::Write;
-use std::net::{SocketAddr, TcpStream};
+use std::net::{AddrParseError, SocketAddr, TcpStream};
 use std::time::Duration;
 //use yeerugina::structs::*;
 
@@ -11,22 +11,24 @@ use std::time::Duration;
 // because that's recommended.
 // Stream is an Option because we're not connected initially.
 // Using a counter that wraps around (wrapping_add)
+
 #[derive(Debug)]
 pub struct Lamp {
 	_name: String,
-	ip: String,
+	ip: SocketAddr,
 	stream: Option<TcpStream>,
 	cmd_count: u8,
 }
 
 impl Lamp {
-	pub fn new(_name: String, ip: String) -> Self {
-		Self {
+	pub fn new(_name: String, ip_str: String) -> Result<Self,AddrParseError> {
+		let ip: SocketAddr = ip_str.parse()?;
+		Ok(Self {
 			_name,
 			ip,
 			stream: None,
 			cmd_count: 0u8,
-		}
+		})
 	}
 
 	// Try to connect to the lamp, returning a Result.
@@ -43,12 +45,9 @@ impl Lamp {
 			));
 		};
 		let mut try_counter = 0u8;
-		let addr: SocketAddr = self.ip.parse().map_err(|_| {
-			io::Error::new(io::ErrorKind::InvalidInput, "Could not parse given address")
-		})?;
 		loop {
 			info!("Start connection attempt loop");
-			let maybe_stream = TcpStream::connect_timeout(&addr, conn_timeout);
+			let maybe_stream = TcpStream::connect_timeout(&self.ip, conn_timeout);
 			try_counter += 1;
 			match maybe_stream {
 				Ok(stream) => {
