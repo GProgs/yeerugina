@@ -12,6 +12,23 @@ use std::time::Duration;
 // Stream is an Option because we're not connected initially.
 // Using a counter that wraps around (wrapping_add)
 
+/// Structure (record) describing a Yeelight lamp.
+///
+/// The struct contains:
+///     - a name chosen by the user
+///     - the lamp's IP address as a SocketAddr
+///     - connection to the lamp as a TcpStream
+///     - a wrapping counter to keep track of commands
+///
+/// Example:
+/// ```
+/// use yeerugina::lamp::Lamp;
+///
+/// let mut lamp = Lamp::new(
+///     String::from("Livingroom"),
+///     String::from("192.168.1.3:55443"),
+/// );
+/// ```
 #[derive(Debug)]
 pub struct Lamp {
 	_name: String,
@@ -21,7 +38,22 @@ pub struct Lamp {
 }
 
 impl Lamp {
-	pub fn new(_name: String, ip_str: String) -> Result<Self,AddrParseError> {
+	/// Creates a new Lamp struct from a user-given name and IP address.
+	///
+	/// The function parses the IP address String into a SocketAddr and creates the struct.
+	/// The function will return an AddrParseError if the IP string cannot be parsed.
+	///
+	/// Example: (Assume you have created a mutable lamp.)
+	/// Example:
+	/// ```
+	/// use yeerugina::lamp::Lamp;
+	///
+	/// let mut lamp = Lamp::new(
+	///     String::from("Livingroom"),
+	///     String::from("192.168.1.3:55443"),
+	/// );
+	/// ```
+	pub fn new(_name: String, ip_str: String) -> Result<Self, AddrParseError> {
 		let ip: SocketAddr = ip_str.parse()?;
 		Ok(Self {
 			_name,
@@ -31,9 +63,32 @@ impl Lamp {
 		})
 	}
 
-	// Try to connect to the lamp, returning a Result.
-	// If successful, the Result will contain the read and write timeouts of the lamp.
-	// None means the call blocks indefinitely.
+	/// Try to connect to the lamp, returning a Result.
+	///
+	/// If successful, the Result will contain the read and write timeouts of the lamp.
+	/// None means the read/write operation may block indefinitely.
+	/// Note that in accordance with connect_timeout() in std::net::TcpStream,
+	/// the conn_timeout parameter should not be zero.
+	///
+	/// Example, assuming you have created a Lamp:
+	/// ```
+	/// use std::time;
+	/// // Read/write timeouts
+	/// let rw_timeouts = (Some(time::Duration::from_secs(3)), None);
+	/// // How many times to attempt to connect to the lamp
+	/// let conn_tries = 5u8;
+	/// // How long to wait between each connection attempt
+	/// let conn_wait = rw_timeouts.0.unwrap();
+	/// // Connection timeout (i.e. how long each attempt takes)
+	/// let conn_timeout = rw_timeouts.0.unwrap();
+	/// lamp.connect(rw_timeouts, conn_tries, conn_wait, conn_timeout)?;
+	/// ```
+	///
+	/// Initially, the function will enter a loop where it attempts to connect to the lamp.
+	/// If successful, the function proceeds to set the read and write timeouts
+	/// to the values provided in the read_write_timeouts tuple.
+	/// If errors arise during the setting stage, they will not interrupt the function.
+	/// Finally, the actual ("real") timeout values are returned as the Result.
 	pub fn connect(
 		&mut self, read_write_timeouts: (Option<Duration>, Option<Duration>), conn_tries: u8,
 		conn_wait: Duration, conn_timeout: Duration,
@@ -101,7 +156,20 @@ impl Lamp {
 				*/
 	}
 
-	// Try to send a command, returning the ID of said command.
+	/// Try to send a command, returning the ID of said command.
+	///
+	/// The function takes in a Command enum, constructs the necessary byte string
+	/// and then transmits the said string over the TcpStream.
+	/// The internal command counter is incremented by one using wrapping_add().
+	/// Any transmission errors (or trying to send_cmd on an unconnected Lamp)
+	/// will be passed to the std::io::Result.
+	///
+	/// Example, assuming you have created a lamp:
+	/// ```
+	/// use yeerugina::structs::{Command, Effect};
+	/// let cmd = Command::SetRgb(0xdeadfeu32, Effect::Smooth, 2000);
+	/// let cmd_id: u8 = lamp.send_cmd(cmd)?;
+	/// ```
 	pub fn send_cmd(&mut self, cmd: Command) -> io::Result<u8> {
 		// Use stream instead of self.stream later on.
 		// Return io::Error if not connected yet.
