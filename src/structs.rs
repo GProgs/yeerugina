@@ -16,48 +16,68 @@ use strum_macros;
 
 // Configuration file where we persist info about the lamp
 //   i.e. what its IP is and where our MQTT broker is
+
+/// Struct that stores settings of the program.
+///
+/// The struct is divided into two parts:
+/// One for the lamp, another for the MQTT connection.
 #[derive(Debug, Deserialize)]
 pub struct Config {
+	/// Sub-struct containing lamp-related settings.
 	pub lamp: LampConfig,
+	/// Sub-struct containing settings for the MQTT connection.
 	pub mqtt: MqttConfig,
 }
 
+/// Struct containing the IP address and several timeout values.
+///
+/// The default_duration pertains to the length of the smooth color transition of the lamp.
+/// The read/write timeouts are related to the TcpStream. None means the corresponding functions
+/// can block indefinitely.
+/// connection_tries indicates how many times the program should attempt to connect before giving
+/// up. The _wait variable is the time between attempts, while connection_timeout is related to the
+/// TcpStream::connect_timeout() function.
 #[derive(Debug, Deserialize)]
 #[serde(rename = "lamp", rename_all = "kebab-case")]
 pub struct LampConfig {
+	/// IP address and port of the lamp.
 	pub ip: SocketAddr,
+	/// How long a smooth color transition takes
 	#[serde(with = "humantime_serde")]
 	pub default_duration: Duration,
+	/// How long TcpStream waits for incoming data.
 	#[serde(
 		deserialize_with = "humantime_serde_opt",
 		default = "default_timeout_opt"
 	)]
 	pub read_timeout: Option<Duration>,
+	/// How long TcpStream takes to send data (at maximum).
 	#[serde(
 		deserialize_with = "humantime_serde_opt",
 		default = "default_timeout_opt"
 	)]
 	pub write_timeout: Option<Duration>,
+	/// How many tries to attempt to connect before giving up.
 	pub connection_tries: u8,
+	/// For how long to wait between connection attempts.
 	#[serde(with = "humantime_serde", default = "default_wait")]
 	pub connection_tries_wait: Duration,
+	/// How long each connection attempt takes (at maximum).
 	#[serde(with = "humantime_serde", default = "default_wait")]
 	pub connection_timeout: Duration,
 }
-// {read,write}_timeout: None means calls should block indefinitely.
 
-// Use 5 secs if the user doesn't give another value.
-// This is for Lamp.connect(...,conn_wait,...,conn_timeout)
+/// The default value for connection_tries_{wait,timeout}.
 fn default_wait() -> Duration {
 	Duration::from_secs(5)
 }
 
-// This is for the TcpStream inside of Lamp
+/// The default value for {read,write}_timeout
 fn default_timeout_opt() -> Option<Duration> {
 	Some(Duration::from_secs(5))
 }
 
-// Custom deserializer function for Option<Duration>
+/// Custom deserializer function for Option<Duration>
 fn humantime_serde_opt<'de, D>(deserializer: D) -> Result<Option<Duration>, D::Error>
 where
 	D: serde::Deserializer<'de>,
@@ -73,15 +93,20 @@ where
 	}
 }
 
+/// Struct containing settings that are used to define the MQTT connection.
 #[derive(Debug, Deserialize)]
 #[serde(rename = "mqtt", rename_all = "kebab-case")]
 pub struct MqttConfig {
+	/// IP address and port of the MQTT broker.
 	pub ip: SocketAddr,
+	/// What topic the program uses as input.
 	pub topic: String,
+	/// Last will and testament (LWT) payload.
 	pub lwt_payload: String,
 }
 
 impl Config {
+	/// Deserialize a .toml file containing the settings and produce a Config struct.
 	pub fn read_file(path: String) -> Result<Self, String> {
 		let cont = std::fs::read_to_string(path).map_err(|e| e.to_string())?;
 		toml::from_str(&cont).map_err(|e| e.to_string())
@@ -89,29 +114,42 @@ impl Config {
 }
 
 // need default due to EnumString trait bound
+/// Enum that indicates the two possible color transitions supported in YeeLight lamps.
+/// Sudden means that the color will change without any time (i.e. instantly),
+/// while Smooth transitions take place over some length of time.
 #[derive(Debug, Default, strum_macros::Display, strum_macros::EnumString)]
 #[strum(serialize_all = "lowercase")]
 pub enum Effect {
+	/// Instant transition.
 	Sudden,
+	/// Smooth transition (used by default)
 	#[default]
 	Smooth,
 }
 
+/// Enum that contains all possible commands supported by YeeLight lamps.
 #[derive(Debug, strum_macros::Display, strum_macros::EnumString)]
 #[strum(serialize_all = "snake_case")]
-//#[derive(Display)]
-//#[display(fmt = r#"{"id":1,"method":"{}","params":"{}"}"#, )]
 pub enum Command {
+	/// Get properties of the lamp (i.e. current color temperature, brightness...)
 	GetProp(Vec<String>),
+	/// Set the color temperature of the lamp.
 	SetCtAbx(u16, Effect, usize),
+	/// Set the color of the lamp using a 24 bit hexadecimal value.
+	/// 0xRRGGBB
 	SetRgb(u32, Effect, usize),
+	/// Set the color of the lamp by hue and saturation.
 	SetHsv(u8, u8, Effect, usize),
+	/// Set the brightness of the lamp in percentages.
 	SetBright(u8, Effect, usize),
+	/// TODO write documentation here
 	SetPower(bool, Effect, usize, Option<usize>),
+	/// Toggle the state of the lamp (i.e. off -> on, on -> off)
 	Toggle,
 }
 
 impl Command {
+	/// Convert a Command to a String, given an integer to use as an ID.
 	pub fn to_request(&self, id: u8) -> String {
 		// Create a comma-separated list of parameters.
 		// For example, "on","smooth",500
@@ -130,24 +168,9 @@ impl Command {
 			},
 			Command::Toggle => String::new(),
 		};
-		//let now = UtcDateTime::now(); // Alternative - let the send_cmd() method handle the
-		// ID stuff. Besides, it needs to verify that the
-		// command worked (or not).
-		//let id: String = format!("{}{}{}",now.hour(),now.minute(),now.second());
-		// Construct the request, adding \r\n to the end
 		format!(
 			concat!(r#"{{"id":{},"method":"{}","params":[{}]}}"#, "\r\n"),
 			id, self, param_part
 		)
 	}
 }
-
-/*
-impl fmt::Display for Command {
-	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-		let out_str: String = match self {
-			command::GetProp(params) =>
-		}
-	}
-}
-*/

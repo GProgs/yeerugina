@@ -9,11 +9,9 @@ humantime = "2.3.0"
 humantime-serde = "1.1.1"
 log = "0.4.28"
 #paho-mqtt = "0.13.3"
+paho-mqtt = { version = "0.13.3", features = ["build_bindgen","vendored-ssl"] }
 regex = "1.11.2"
 serde = { version = "1.0.228", features = ["derive"] }
 strum = "0.27.2"
 strum_macros = "0.27.2"
 toml = { version = "0.9.7", features = ["parse"] }
-#derive_more = { version = "0.99.16", default-features = false, features = ["display"] }
-#paho-mqtt = { version = "0.13", features = ["build_bindgen","vendored-ssl"] }
-#time = { version = "0.3.44", features = ["formatting"] }

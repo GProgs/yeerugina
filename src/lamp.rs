@@ -5,12 +5,6 @@ use std::io;
 use std::io::Write;
 use std::net::{AddrParseError, SocketAddr, TcpStream};
 use std::time::Duration;
-//use yeerugina::structs::*;
-
-// Just FYI we're deriving Debug for all structs here
-// because that's recommended.
-// Stream is an Option because we're not connected initially.
-// Using a counter that wraps around (wrapping_add)
 
 /// Structure (record) describing a Yeelight lamp.
 ///
@@ -119,7 +113,6 @@ impl Lamp {
 				},
 			};
 		}
-		//self.stream = Some(TcpStream::connect(&self.ip)?);
 		// Using unwrap() since we just defined self.stream = Some(...)
 		let stream: &mut TcpStream = self
 			.stream
@@ -136,24 +129,6 @@ impl Lamp {
 		// Note that if both operations fail
 		// only the read_timeout failure will be propagated
 		Ok((stream.read_timeout()?, stream.write_timeout()?))
-		/*
-		match (stream.read_timeout(), stream.write_timeout()) {
-			(Ok(rt), Ok(wt)) => Ok((rt, wt)),
-			(Err(er), Err(ew)) => {
-				warn!("Reading timeouts failed; read {er}, write {ew}");
-				info!("Returning only read timeout error");
-				Err(er)
-			},
-			(Err(er), _) => {
-				warn!("Reading read timeout failed; {er}");
-				Err(er)
-			},
-			(_, Err(ew)) => {
-				warn!("Reading write timeout failed; {ew}");
-				Err(ew)
-			},
-		}
-				*/
 	}
 
 	/// Try to send a command, returning the ID of said command.
@@ -195,6 +170,9 @@ impl Lamp {
 	}
 
 	// Check that resp corresponds to the most recent command submitted to this lamp.
+
+	/// Checks that a response originates from the most recently sent command.
+	/// Returns a boolean if successful, an error otherwise.
 	pub fn is_latest_cmd(&self, resp: &[u8]) -> Result<bool, String> {
 		// map_err replaces let-else construction
 		let re = Regex::new(r#""id":\d+"#).map_err(|e| e.to_string())?;
@@ -208,11 +186,12 @@ impl Lamp {
 		Ok(resp_id == self.cmd_count.wrapping_sub(1))
 	}
 
-	// Take in a response from the lamp
-	// Return Ok(None) if succeeded and nothing returned
-	//   (for example, when using set_rgb or toggle)
-	// Ok(String) if get_prop was called and we got values back
-	// Err(String) if something went wrong
+	/// Take in a response from the lamp and parse it.
+	///
+	/// Return Ok(None) if succeeded and nothing returned
+	/// (for example, when using set_rgb or toggle)
+	/// Ok(String) if get_prop was called and we got values back
+	/// Err(String) if something went wrong
 	pub fn parse_response(resp: &[u8]) -> Result<Option<String>, String> {
 		todo!()
 		//let Ok(re) = Regex::new(todo!()) else {
