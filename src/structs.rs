@@ -1,4 +1,4 @@
-use log::info;
+use log::debug;
 use serde::Deserialize;
 use std::net::SocketAddr;
 use std::time::Duration;
@@ -83,7 +83,7 @@ where
 	D: serde::Deserializer<'de>,
 {
 	let opt = Option::<String>::deserialize(deserializer)?;
-	info!("Deserialized option {opt:?}");
+	debug!("Deserialized option {opt:?}");
 	match opt {
 		None => Ok(None), // don't care, will be replaced by default_timeout()
 		Some(s) if s.is_empty() => Ok(None), // this one will actually be None
@@ -108,7 +108,9 @@ pub struct MqttConfig {
 impl Config {
 	/// Deserialize a .toml file containing the settings and produce a Config struct.
 	pub fn read_file(path: String) -> Result<Self, String> {
+                debug!("Reading config from {path}");
 		let cont = std::fs::read_to_string(path).map_err(|e| e.to_string())?;
+                debug!("File read successfully");
 		toml::from_str(&cont).map_err(|e| e.to_string())
 	}
 }
@@ -117,7 +119,9 @@ impl Config {
 /// Enum that indicates the two possible color transitions supported in YeeLight lamps.
 /// Sudden means that the color will change without any time (i.e. instantly),
 /// while Smooth transitions take place over some length of time.
-#[derive(Debug, Default, strum_macros::Display, strum_macros::EnumString)]
+#[derive(
+	Clone, Copy, Debug, Default, PartialEq, Eq, strum_macros::Display, strum_macros::EnumString,
+)]
 #[strum(serialize_all = "lowercase")]
 pub enum Effect {
 	/// Instant transition.
@@ -128,7 +132,10 @@ pub enum Effect {
 }
 
 /// Enum that contains all possible commands supported by YeeLight lamps.
-#[derive(Debug, strum_macros::Display, strum_macros::EnumString)]
+///
+/// Note that parsing logic is NOT included in the Command enum. Instead, the user is responsible
+/// for parsing any Strings to Commands. See mqtt.rs.
+#[derive(Clone, Debug, PartialEq, Eq, strum_macros::Display, strum_macros::EnumString)]
 #[strum(serialize_all = "snake_case")]
 pub enum Command {
 	/// Get properties of the lamp (i.e. current color temperature, brightness...)
