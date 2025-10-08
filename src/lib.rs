@@ -7,8 +7,8 @@
 
 /// Module containing the Lamp struct.
 pub mod lamp;
-/// Module containing commands that pertain to MQTT.
-/// For instance, commands taking in input messages are defined here.
+/// Module containing functions that pertain to MQTT.
+/// For instance, functions taking in input messages are defined here.
 pub mod mqtt;
 /// Module containing other structs used by the program.
 pub mod structs;
