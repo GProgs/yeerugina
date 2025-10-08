@@ -9,5 +9,6 @@ connection-timeout = "5s"
 
 [mqtt]
 ip = "127.0.0.1:1111"
+id = "yeerugina-example"
 topic = "foobar"
 lwt-payload = "goodbye"

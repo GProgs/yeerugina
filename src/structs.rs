@@ -99,18 +99,25 @@ where
 pub struct MqttConfig {
 	/// IP address and port of the MQTT broker.
 	pub ip: SocketAddr,
+	/// Client identifier used as the name of this program:
+	#[serde(default = "default_id")]
+	pub id: String,
 	/// What topic the program uses as input.
 	pub topic: String,
 	/// Last will and testament (LWT) payload.
 	pub lwt_payload: String,
 }
 
+fn default_id() -> String {
+	String::from("yeerugina")
+}
+
 impl Config {
 	/// Deserialize a .toml file containing the settings and produce a Config struct.
 	pub fn read_file(path: String) -> Result<Self, String> {
-                debug!("Reading config from {path}");
+		debug!("Reading config from {path}");
 		let cont = std::fs::read_to_string(path).map_err(|e| e.to_string())?;
-                debug!("File read successfully");
+		debug!("File read successfully");
 		toml::from_str(&cont).map_err(|e| e.to_string())
 	}
 }

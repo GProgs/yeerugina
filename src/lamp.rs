@@ -1,5 +1,5 @@
 use crate::structs::Command;
-use log::{trace, debug, info, warn};
+use log::{debug, info, trace, warn};
 use regex::bytes::Regex;
 use std::io;
 use std::io::Write;
@@ -48,7 +48,7 @@ impl Lamp {
 	/// );
 	/// ```
 	pub fn new(name: String, ip_str: String) -> Result<Self, AddrParseError> {
-                trace!("{} | Creating a new lamp",name);
+		trace!("{} | Creating a new lamp", name);
 		let ip: SocketAddr = ip_str.parse()?;
 		Ok(Self {
 			name,
@@ -94,15 +94,15 @@ impl Lamp {
 				"conn_timeout cannot be zero",
 			));
 		};
-                info!("{} | Connecting lamp",self.name);
+		info!("{} | Connecting lamp", self.name);
 		let mut try_counter = 0u8;
 		loop {
-			debug!("{} | Start connection attempt loop",self.name);
+			debug!("{} | Start connection attempt loop", self.name);
 			let maybe_stream = TcpStream::connect_timeout(&self.ip, conn_timeout);
 			try_counter += 1;
 			match maybe_stream {
 				Ok(stream) => {
-                                        debug!("{} | TcpStream returned from connect_timeout()",self.name);
+					debug!("{} | TcpStream returned from connect_timeout()", self.name);
 					self.stream = Some(stream);
 					break;
 				},
@@ -122,7 +122,7 @@ impl Lamp {
 			.as_mut()
 			.expect("Could not get mutable ref to stream");
 		// Try to set the read and write timeouts
-                trace!("{} | Setting timeout values",self.name);
+		trace!("{} | Setting timeout values", self.name);
 		if let Err(e) = stream.set_read_timeout(read_write_timeouts.0) {
 			warn!("Could not set TcpStream read timeout: {e}");
 		};
@@ -150,13 +150,13 @@ impl Lamp {
 	/// let cmd_id: u8 = lamp.send_cmd(cmd)?;
 	/// ```
 	pub fn send_cmd(&mut self, cmd: Command) -> io::Result<u8> {
-                debug!("{} | Attempting to send command {cmd:?}",self.name);
+		debug!("{} | Attempting to send command {cmd:?}", self.name);
 		// Use stream instead of self.stream later on.
 		// Return io::Error if not connected yet.
 		// ref mut because shared reference and moves...
 		// let Some(stream) makes the borrow checker cry :'(
 		let Some(ref mut stream) = self.stream else {
-                        warn!("{} | Lamp not connected, cannot send command",self.name);
+			warn!("{} | Lamp not connected, cannot send command", self.name);
 			return Err(io::Error::new(
 				io::ErrorKind::NotConnected,
 				"Lamp is not connected yet",
@@ -164,16 +164,16 @@ impl Lamp {
 		};
 		// Get the ID for the message
 		let id = self.cmd_count;
-                debug!("{} Command ID {id}",self.name);
+		debug!("{} Command ID {id}", self.name);
 		// Construct message bytes
 		let req = cmd.to_request(id);
 		let byte_arr: &[u8] = req.as_bytes();
 		// Output and increment counter
-                trace!("{} | Writing bytes to TcpStream",self.name);
+		trace!("{} | Writing bytes to TcpStream", self.name);
 		stream.write_all(byte_arr)?;
 		//self.cmd_count += 1;
 		self.cmd_count = self.cmd_count.wrapping_add(1);
-                debug!("{} | New Command ID {}",self.name,self.cmd_count);
+		debug!("{} | New Command ID {}", self.name, self.cmd_count);
 
 		Ok(id)
 	}
@@ -183,17 +183,17 @@ impl Lamp {
 	/// Checks that a response originates from the most recently sent command.
 	/// Returns a boolean if successful, an error otherwise.
 	pub fn is_latest_cmd(&self, resp: &[u8]) -> Result<bool, String> {
-                trace!("{} | Checking response ID",self.name);
+		trace!("{} | Checking response ID", self.name);
 		// map_err replaces let-else construction
 		let re = Regex::new(r#""id":\d+"#).map_err(|e| e.to_string())?;
 		// Match the response, then Option -> Result<...,&str>
 		let cap = re.captures(resp).ok_or("No ID match found")?;
-                trace!("{} | Captured {cap:?}",self.name);
+		trace!("{} | Captured {cap:?}", self.name);
 		let (_, [resp_id_bytes]) = cap.extract();
 		let resp_id = (str::from_utf8(resp_id_bytes).map_err(|e| e.to_string())?)
 			.parse::<u8>()
 			.map_err(|e| e.to_string())?;
-                trace!("{} | Obtained response ID {resp_id}",self.name);
+		trace!("{} | Obtained response ID {resp_id}", self.name);
 
 		Ok(resp_id == self.cmd_count.wrapping_sub(1))
 	}
