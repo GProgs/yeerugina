@@ -1,8 +1,7 @@
-//use yeerugina::lamp::Lamp;
-use ctrlc;
+//use ctrlc;
 use log::{debug, error, info};
 use paho_mqtt as mqtt;
-use yeerugina::mqtt::mqtt_props;
+use yeerugina::mqtt::{mqtt_props, parse_mqtt_command, sub_id};
 use yeerugina::structs::{Command, Config};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -15,7 +14,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 	// Creating options here
 	let create_opts = mqtt::CreateOptionsBuilder::new()
 		.server_uri(format!("mqtt://{}", conf.mqtt.ip))
-		.client_id(conf.mqtt.id)
+		.client_id(conf.mqtt.client_id)
 		.finalize();
 	debug!("MQTT settings created");
 
@@ -44,16 +43,73 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 	let rsp: mqtt::ServerResponse = cli.connect(conn_opts)?;
 
 	if let Some(conn_rsp) = rsp.connect_response() {
-		todo!();
+		info!(
+			"Connected to {}, MQTT v. {}",
+			conn_rsp.server_uri, conn_rsp.mqtt_version
+		);
+
+		// Check if the server remembers us or no?
+		debug!("Checking session presence");
+		if !conn_rsp.session_present {
+			info!("Subscribing to topic");
+			cli.subscribe_with_options(
+				conf.mqtt.topic,
+				conf.mqtt.qos,
+				None,
+				sub_id(conf.mqtt.sub_id),
+			)?;
+		}
 	}
 
 	// Implement Ctrl-C
 	let ctrlc_cli = cli.clone();
-	if let Err(e) = ctrlc::set_handler(move || {
+	let ctrlc_res = ctrlc::set_handler(move || {
 		info!("Received Ctrl+C signal");
 		ctrlc_cli.stop_consuming();
-	}) {
+	});
+	// Failure to add Ctrl+C is not fatal, but an error.
+	if let Err(e) = ctrlc_res {
 		error!("Could not add Ctrl+C handling: {e}");
+	};
+	//println!("{ctrlc_res:?}");
+
+	info!("Message reception loop ON");
+	for msg in rx.iter() {
+		if let Some(msg) = msg {
+			let (msg_topic, msg_payload, msg_qos, msg_retain, msg_props) = (
+				msg.topic(),
+				msg.payload_str(), // Cow<'_,str>
+				msg.qos(),
+				msg.retained(),
+				msg.properties(),
+			);
+			info!(
+				"Received message. Topic {}, QoS {}, retain {}, props {:?}, content: {}",
+				msg_topic, msg_qos, msg_retain, msg_props, msg_payload
+			);
+			// Deconstruct needed properties
+
+			// Subscription ID: i32
+			let Some(msg_sub_id) = msg_props.get_int(mqtt::PropertyCode::SubscriptionIdentifier)
+			else {
+				info!("Message has no associated subscription ID; skipping");
+				continue;
+			};
+			if msg_sub_id != conf.mqtt.sub_id {
+				info!("Message has wrong subscription ID; skipping");
+				continue;
+			}
+
+			let cmd = parse_mqtt_command(String::from(msg_payload))?;
+
+			todo!();
+		} else if !cli.is_connected() {
+			error!("Connection to MQTT broker lost");
+			todo!(); // reconnect here
+		} else {
+			error!("Received None message");
+			continue;
+		}
 	}
 
 	Ok(())

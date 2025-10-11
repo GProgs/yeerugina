@@ -101,15 +101,24 @@ pub struct MqttConfig {
 	pub ip: SocketAddr,
 	/// Client identifier used as the name of this program:
 	#[serde(default = "default_id")]
-	pub id: String,
+	pub client_id: String,
 	/// What topic the program uses as input.
 	pub topic: String,
+	/// Subscription ID used for this topic.
+	pub sub_id: i32,
+	/// Define the QoS value for the subscription.
+	#[serde(default = "default_qos")]
+	pub qos: u32,
 	/// Last will and testament (LWT) payload.
 	pub lwt_payload: String,
 }
 
 fn default_id() -> String {
 	String::from("yeerugina")
+}
+
+fn default_qos() -> u32 {
+	1u32
 }
 
 impl Config {
