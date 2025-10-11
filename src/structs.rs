@@ -40,6 +40,8 @@ pub struct Config {
 #[derive(Debug, Deserialize)]
 #[serde(rename = "lamp", rename_all = "kebab-case")]
 pub struct LampConfig {
+	/// A name for identifying the lamp.
+	pub name: String,
 	/// IP address and port of the lamp.
 	pub ip: SocketAddr,
 	/// How long a smooth color transition takes
@@ -93,6 +95,13 @@ where
 	}
 }
 
+impl LampConfig {
+	/// Get a tuple containing the read and write timeouts of the lamp.
+	pub fn get_read_write_timeouts(&self) -> (Option<Duration>, Option<Duration>) {
+		(self.read_timeout, self.write_timeout)
+	}
+}
+
 /// Struct containing settings that are used to define the MQTT connection.
 #[derive(Debug, Deserialize)]
 #[serde(rename = "mqtt", rename_all = "kebab-case")]
@@ -113,10 +122,12 @@ pub struct MqttConfig {
 	pub lwt_payload: String,
 }
 
+/// Default client ID.
 fn default_id() -> String {
 	String::from("yeerugina")
 }
 
+/// Default QoS value
 fn default_qos() -> u32 {
 	1u32
 }

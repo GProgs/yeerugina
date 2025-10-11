@@ -1,6 +1,7 @@
 //use ctrlc;
-use log::{debug, error, info};
+use log::{debug, error, info, warn};
 use paho_mqtt as mqtt;
+use yeerugina::lamp::Lamp;
 use yeerugina::mqtt::{mqtt_props, parse_mqtt_command, sub_id};
 use yeerugina::structs::{Command, Config};
 
@@ -10,6 +11,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 	let conf = Config::read_file(String::from("config.toml"))?;
 	info!("Config loaded");
+
+	// Create lamp struct
+	// Could we handle the AddrParseError more cleanly?
+	let mut lamp = Lamp::new(conf.lamp.name, conf.lamp.ip)?;
 
 	// Creating options here
 	let create_opts = mqtt::CreateOptionsBuilder::new()
@@ -39,7 +44,21 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 		.finalize();
 	debug!("Connection options created");
 
-	// Connect to the broker
+	// Connect to the lamp and broker
+	debug!("Connecting to the lamp");
+	let lamp_rw_timeouts = conf.lamp.get_read_write_timeouts();
+	let lamp_res = lamp.connect(
+		lamp_rw_timeouts,
+		conf.lamp.connection_tries,
+		conf.lamp.connection_tries_wait,
+		conf.lamp.connection_timeout,
+	)?;
+        // Emit a warning if we could not set the timeouts
+	if lamp_res != lamp_rw_timeouts {
+		warn!("Actual timeouts different from configured ones: {lamp_res}");
+	}
+        // Connect to the broker
+        debug!("Connecting to the broker");
 	let rsp: mqtt::ServerResponse = cli.connect(conn_opts)?;
 
 	if let Some(conn_rsp) = rsp.connect_response() {
@@ -87,8 +106,6 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 				"Received message. Topic {}, QoS {}, retain {}, props {:?}, content: {}",
 				msg_topic, msg_qos, msg_retain, msg_props, msg_payload
 			);
-			// Deconstruct needed properties
-
 			// Subscription ID: i32
 			let Some(msg_sub_id) = msg_props.get_int(mqtt::PropertyCode::SubscriptionIdentifier)
 			else {
@@ -99,8 +116,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 				info!("Message has wrong subscription ID; skipping");
 				continue;
 			}
-
+			// Parse the command
 			let cmd = parse_mqtt_command(String::from(msg_payload))?;
+			if let Err(e) = cmd {
+				error!("Could not parse MQTT command: {e}");
+				continue;
+			} else {
+				cmd = cmd.unwrap();
+			}
+			// Pass the command to our lamp
 
 			todo!();
 		} else if !cli.is_connected() {
