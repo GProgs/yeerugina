@@ -1,3 +1,4 @@
+use color::{OpaqueColor,Rgba8};
 use log::debug;
 use serde::Deserialize;
 use std::net::SocketAddr;
@@ -5,17 +6,17 @@ use std::time::Duration;
 use strum_macros;
 
 /* TODO list here:
+ * - Add a ConnectionSettings tuple struct (so that Lamp::connect() wouldn't be so cursed)
+ * - Integrate OpaqueColor into our ecosystem better
+ * - We might need a stateful memory that updates a state memory based on MQTT messages
+ * - Create a "dummy version" of Lamp so that we can test our code (no-op connect() method, print
+ * bytes from send_cmd(),...)
+ *
  * - Create some kind of logic (i.e. separate method etc.) to read responses
  * - Write the regex for the parse command (see the todo!() macro)
  * - (for a lot later) figure out openssl... won't build on my Windows laptop
  *   because clang lib missing...
  */
-
-// Just FYI we're deriving Debug for all structs here
-// because that's recommended.
-
-// Configuration file where we persist info about the lamp
-//   i.e. what its IP is and where our MQTT broker is
 
 /// Struct that stores settings of the program.
 ///
@@ -174,6 +175,8 @@ pub enum Command {
 	SetRgb(u32, Effect, usize),
 	/// Set the color of the lamp by hue and saturation.
 	SetHsv(u8, u8, Effect, usize),
+        /// Additional command: Set the color of the lamp by passing in an OpaqueColor.
+        SetOpaqueColor(OpaqueColor, Effect, usize),
 	/// Set the brightness of the lamp in percentages.
 	SetBright(u8, Effect, usize),
 	/// TODO write documentation here
@@ -194,6 +197,17 @@ impl Command {
 			Command::SetCtAbx(ct_val, eff, dur) => format!(r#"{},"{}",{}"#, ct_val, eff, dur),
 			Command::SetRgb(rgb, eff, dur) => format!(r#"{},"{}",{}"#, rgb, eff, dur),
 			Command::SetHsv(hue, sat, eff, dur) => format!(r#"{},{},"{}",{}"#, hue, sat, eff, dur),
+                        // Convert OpaqueColor to r,g,b values
+                        // combine them with u32::from_be_bytes
+                        // and recurse back thru SetRgb enum
+                        Command::SetOpaqueColor(col, eff, dur) => {
+                            //let rgba: Rgba8 = col.to_rgba8();
+                            let Rgba8 { r: red, g: green, b: blue, a: _, } = col.to_rgba8();
+                            //let rgb: u32 = (red << 16) + (green << 8) + blue;
+                            let rgb = u32::from_be_bytes([0x0, red, green, blue]);
+                            let rgb_cmd = Command::SetRgb(rgb,eff,dur);
+                            rgb_cmd.to_request(id)
+                        },
 			Command::SetBright(bri, eff, dur) => format!(r#"{},"{}",{}"#, bri, eff, dur),
 			Command::SetPower(pow, eff, dur, maybe_mod) => {
 				// handle optional
