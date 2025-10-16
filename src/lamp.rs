@@ -1,4 +1,4 @@
-use crate::structs::Command;
+use crate::structs::{Command, ConnectionSettings};
 use log::{debug, info, trace, warn};
 use regex::bytes::Regex;
 use std::io;
@@ -85,9 +85,15 @@ impl Lamp {
 	/// If errors arise during the setting stage, they will not interrupt the function.
 	/// Finally, the actual ("real") timeout values are returned as the Result.
 	pub fn connect(
-		&mut self, read_write_timeouts: (Option<Duration>, Option<Duration>), conn_tries: u8,
-		conn_wait: Duration, conn_timeout: Duration,
+		&mut self, conn_settings: ConnectionSettings,
 	) -> io::Result<(Option<Duration>, Option<Duration>)> {
+		let ConnectionSettings {
+			read_timeout,
+			write_timeout,
+			conn_timeout,
+			conn_tries,
+			conn_wait,
+		} = conn_settings;
 		if conn_timeout.is_zero() {
 			return Err(io::Error::new(
 				io::ErrorKind::InvalidInput,
@@ -123,10 +129,10 @@ impl Lamp {
 			.expect("Could not get mutable ref to stream");
 		// Try to set the read and write timeouts
 		trace!("{} | Setting timeout values", self.name);
-		if let Err(e) = stream.set_read_timeout(read_write_timeouts.0) {
+		if let Err(e) = stream.set_read_timeout(read_timeout) {
 			warn!("Could not set TcpStream read timeout: {e}");
 		};
-		if let Err(e) = stream.set_write_timeout(read_write_timeouts.1) {
+		if let Err(e) = stream.set_write_timeout(write_timeout) {
 			warn!("Could not set TcpStream write timeout: {e}");
 		};
 		// Get the values for the timeouts here

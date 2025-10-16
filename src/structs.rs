@@ -1,4 +1,4 @@
-use color::{OpaqueColor,Rgba8};
+use color::{OpaqueColor, Rgba8};
 use log::debug;
 use serde::Deserialize;
 use std::net::SocketAddr;
@@ -6,7 +6,6 @@ use std::time::Duration;
 use strum_macros;
 
 /* TODO list here:
- * - Add a ConnectionSettings tuple struct (so that Lamp::connect() wouldn't be so cursed)
  * - Integrate OpaqueColor into our ecosystem better
  * - We might need a stateful memory that updates a state memory based on MQTT messages
  * - Create a "dummy version" of Lamp so that we can test our code (no-op connect() method, print
@@ -101,6 +100,17 @@ impl LampConfig {
 	pub fn get_read_write_timeouts(&self) -> (Option<Duration>, Option<Duration>) {
 		(self.read_timeout, self.write_timeout)
 	}
+
+	/// Return a ConnectionSettings struct.
+	pub fn get_connection_settings(&self) -> ConnectionSettings {
+		ConnectionSettings {
+			read_timeout: self.read_timeout,
+			write_timeout: self.write_timeout,
+			conn_timeout: self.connection_timeout,
+			conn_tries: self.connection_tries,
+			conn_wait: self.connection_tries_wait,
+		}
+	}
 }
 
 /// Struct containing settings that are used to define the MQTT connection.
@@ -143,6 +153,23 @@ impl Config {
 	}
 }
 
+/// A struct containing settings that is passed to Lamp::connect().
+
+type OptDuration = Option<Duration>;
+#[derive(Debug)]
+pub struct ConnectionSettings {
+	/// Read timeout for TcpStream
+	pub read_timeout: OptDuration,
+	/// Write timeout for TcpStream
+	pub write_timeout: OptDuration,
+	/// Connection timeout for TcpStream::connect_timeout()
+	pub conn_timeout: OptDuration,
+	/// How many times to attempt to connect to the lamp
+	pub conn_tries: u8,
+	/// How long to wait between each connection attempt
+	pub conn_wait: Duration,
+}
+
 // need default due to EnumString trait bound
 /// Enum that indicates the two possible color transitions supported in YeeLight lamps.
 /// Sudden means that the color will change without any time (i.e. instantly),
@@ -175,8 +202,8 @@ pub enum Command {
 	SetRgb(u32, Effect, usize),
 	/// Set the color of the lamp by hue and saturation.
 	SetHsv(u8, u8, Effect, usize),
-        /// Additional command: Set the color of the lamp by passing in an OpaqueColor.
-        SetOpaqueColor(OpaqueColor, Effect, usize),
+	/// Additional command: Set the color of the lamp by passing in an OpaqueColor.
+	SetOpaqueColor(OpaqueColor, Effect, usize),
 	/// Set the brightness of the lamp in percentages.
 	SetBright(u8, Effect, usize),
 	/// TODO write documentation here
@@ -197,17 +224,22 @@ impl Command {
 			Command::SetCtAbx(ct_val, eff, dur) => format!(r#"{},"{}",{}"#, ct_val, eff, dur),
 			Command::SetRgb(rgb, eff, dur) => format!(r#"{},"{}",{}"#, rgb, eff, dur),
 			Command::SetHsv(hue, sat, eff, dur) => format!(r#"{},{},"{}",{}"#, hue, sat, eff, dur),
-                        // Convert OpaqueColor to r,g,b values
-                        // combine them with u32::from_be_bytes
-                        // and recurse back thru SetRgb enum
-                        Command::SetOpaqueColor(col, eff, dur) => {
-                            //let rgba: Rgba8 = col.to_rgba8();
-                            let Rgba8 { r: red, g: green, b: blue, a: _, } = col.to_rgba8();
-                            //let rgb: u32 = (red << 16) + (green << 8) + blue;
-                            let rgb = u32::from_be_bytes([0x0, red, green, blue]);
-                            let rgb_cmd = Command::SetRgb(rgb,eff,dur);
-                            rgb_cmd.to_request(id)
-                        },
+			// Convert OpaqueColor to r,g,b values
+			// combine them with u32::from_be_bytes
+			// and recurse back thru SetRgb enum
+			Command::SetOpaqueColor(col, eff, dur) => {
+				//let rgba: Rgba8 = col.to_rgba8();
+				let Rgba8 {
+					r: red,
+					g: green,
+					b: blue,
+					a: _,
+				} = col.to_rgba8();
+				//let rgb: u32 = (red << 16) + (green << 8) + blue;
+				let rgb = u32::from_be_bytes([0x0, red, green, blue]);
+				let rgb_cmd = Command::SetRgb(rgb, eff, dur);
+				rgb_cmd.to_request(id)
+			},
 			Command::SetBright(bri, eff, dur) => format!(r#"{},"{}",{}"#, bri, eff, dur),
 			Command::SetPower(pow, eff, dur, maybe_mod) => {
 				// handle optional

@@ -53,12 +53,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 		conf.lamp.connection_tries_wait,
 		conf.lamp.connection_timeout,
 	)?;
-        // Emit a warning if we could not set the timeouts
+	// Emit a warning if we could not set the timeouts
 	if lamp_res != lamp_rw_timeouts {
 		warn!("Actual timeouts different from configured ones: {lamp_res}");
 	}
-        // Connect to the broker
-        debug!("Connecting to the broker");
+	// Connect to the broker
+	debug!("Connecting to the broker");
 	let rsp: mqtt::ServerResponse = cli.connect(conn_opts)?;
 
 	if let Some(conn_rsp) = rsp.connect_response() {
