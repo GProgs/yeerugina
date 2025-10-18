@@ -1,4 +1,4 @@
-use crate::structs::{Command, ConnectionSettings};
+use crate::structs::{Command, ConnectionSettings, Effect};
 use log::{debug, info, trace, warn};
 use regex::bytes::Regex;
 use std::io;
@@ -26,6 +26,8 @@ use std::time::Duration;
 #[derive(Debug)]
 pub struct Lamp {
 	name: String,
+	effect: Effect,
+	duration: Duration,
 	ip: SocketAddr,
 	stream: Option<TcpStream>,
 	cmd_count: u8,
@@ -40,18 +42,25 @@ impl Lamp {
 	/// Example: (Assume you have created a mutable lamp.)
 	/// Example:
 	/// ```
-	/// use yeerugina::lamp::Lamp;
+	/// use yeerugina::lamp::{Lamp,Effect};
+	/// use std::time::Duration;
 	///
 	/// let mut lamp = Lamp::new(
 	///     String::from("Livingroom"),
 	///     String::from("192.168.1.3:55443"),
+	///     Effect::default(),
+	///     Duration::from_millis(1500)
 	/// );
 	/// ```
-	pub fn new(name: String, ip_str: String) -> Result<Self, AddrParseError> {
+	pub fn new(
+		name: String, ip_str: String, effect: Effect, duration: Duration,
+	) -> Result<Self, AddrParseError> {
 		trace!("{} | Creating a new lamp", name);
 		let ip: SocketAddr = ip_str.parse()?;
 		Ok(Self {
 			name,
+			effect,
+			duration,
 			ip,
 			stream: None,
 			cmd_count: 0u8,
@@ -76,14 +85,14 @@ impl Lamp {
 	/// let conn_wait = rw_timeouts.0.unwrap();
 	/// // Connection timeout (i.e. how long each attempt takes)
 	/// let conn_timeout = rw_timeouts.0.unwrap();
-        /// // Construct ConnectionSettings
-        /// let conn_settings = ConnectionSettings {
-        ///     read_timeout: rw_timeouts.0,
-        ///     write_timeout: rw_timeouts.1,
-        ///     conn_timeout,
-        ///     conn_tries,
-        ///     conn_wait,
-        /// }
+	/// // Construct ConnectionSettings
+	/// let conn_settings = ConnectionSettings {
+	///     read_timeout: rw_timeouts.0,
+	///     write_timeout: rw_timeouts.1,
+	///     conn_timeout,
+	///     conn_tries,
+	///     conn_wait,
+	/// }
 	/// lamp.connect(conn_settings)?;
 	/// ```
 	///
@@ -180,7 +189,7 @@ impl Lamp {
 		let id = self.cmd_count;
 		debug!("{} Command ID {id}", self.name);
 		// Construct message bytes
-		let req = cmd.to_request(id);
+		let req = cmd.to_request(id, &self.effect, &self.duration);
 		let byte_arr: &[u8] = req.as_bytes();
 		// Output and increment counter
 		trace!("{} | Writing bytes to TcpStream", self.name);

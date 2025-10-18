@@ -196,38 +196,38 @@ pub enum Command {
 	/// Get properties of the lamp (i.e. current color temperature, brightness...)
 	GetProp(Vec<String>),
 	/// Set the color temperature of the lamp.
-	SetCtAbx(u16, Effect, usize),
+	SetCtAbx(u16),
 	/// Set the color of the lamp using a 24 bit hexadecimal value.
 	/// 0xRRGGBB
-	SetRgb(u32, Effect, usize),
+	SetRgb(u32),
 	/// Set the color of the lamp by hue and saturation.
-	SetHsv(u8, u8, Effect, usize),
+	SetHsv(u8, u8),
 	/// Additional command: Set the color of the lamp by passing in an OpaqueColor.
-	SetOpaqueColor(OpaqueColor, Effect, usize),
+	SetOpaqueColor(OpaqueColor),
 	/// Set the brightness of the lamp in percentages.
-	SetBright(u8, Effect, usize),
+	SetBright(u8),
 	/// TODO write documentation here
-	SetPower(bool, Effect, usize, Option<usize>),
+	//SetPower(bool, Effect, usize, Option<usize>),
 	/// Toggle the state of the lamp (i.e. off -> on, on -> off)
 	Toggle,
 }
 
 impl Command {
 	/// Convert a Command to a String, given an integer to use as an ID.
-	pub fn to_request(&self, id: u8) -> String {
+	pub fn to_request(&self, id: u8, eff: &Effect, dur: &Duration) -> String {
 		// Create a comma-separated list of parameters.
 		// For example, "on","smooth",500
 		// or 60,30,"sudden"
 		// If a method does NOT expect parameters, use an EMPTY STRING.
 		let param_part: String = match self {
 			Command::GetProp(params) => format!("\"{}\"", params.join("\",\"")), // quotes
-			Command::SetCtAbx(ct_val, eff, dur) => format!(r#"{},"{}",{}"#, ct_val, eff, dur),
-			Command::SetRgb(rgb, eff, dur) => format!(r#"{},"{}",{}"#, rgb, eff, dur),
-			Command::SetHsv(hue, sat, eff, dur) => format!(r#"{},{},"{}",{}"#, hue, sat, eff, dur),
+			Command::SetCtAbx(ct_val) => format!(r#"{},"{}",{}"#, ct_val, eff, dur),
+			Command::SetRgb(rgb) => format!(r#"{},"{}",{}"#, rgb, eff, dur),
+			Command::SetHsv(hue, sat) => format!(r#"{},{},"{}",{}"#, hue, sat, eff, dur),
 			// Convert OpaqueColor to r,g,b values
 			// combine them with u32::from_be_bytes
 			// and recurse back thru SetRgb enum
-			Command::SetOpaqueColor(col, eff, dur) => {
+			Command::SetOpaqueColor(col) => {
 				//let rgba: Rgba8 = col.to_rgba8();
 				let Rgba8 {
 					r: red,
@@ -240,12 +240,14 @@ impl Command {
 				let rgb_cmd = Command::SetRgb(rgb, eff, dur);
 				rgb_cmd.to_request(id)
 			},
-			Command::SetBright(bri, eff, dur) => format!(r#"{},"{}",{}"#, bri, eff, dur),
-			Command::SetPower(pow, eff, dur, maybe_mod) => {
+			Command::SetBright(bri) => format!(r#"{},"{}",{}"#, bri, eff, dur),
+			/*
+						Command::SetPower(pow, eff, dur, maybe_mod) => {
 				// handle optional
 				let mode = maybe_mod.unwrap_or_default(); // can't use mod
 				format!(r#"{},{},"{}",{}"#, pow, eff, dur, mode)
 			},
+						*/
 			Command::Toggle => String::new(),
 		};
 		format!(
