@@ -10,6 +10,8 @@ pub mod lamp;
 /// Module containing functions that pertain to MQTT.
 /// For instance, functions taking in input messages are defined here.
 pub mod mqtt;
+/// Module containing objects needed for stateful lamp control.
+pub mod stateful;
 /// Module containing other structs used by the program.
 pub mod structs;
 
