@@ -76,7 +76,15 @@ impl Lamp {
 	/// let conn_wait = rw_timeouts.0.unwrap();
 	/// // Connection timeout (i.e. how long each attempt takes)
 	/// let conn_timeout = rw_timeouts.0.unwrap();
-	/// lamp.connect(rw_timeouts, conn_tries, conn_wait, conn_timeout)?;
+        /// // Construct ConnectionSettings
+        /// let conn_settings = ConnectionSettings {
+        ///     read_timeout: rw_timeouts.0,
+        ///     write_timeout: rw_timeouts.1,
+        ///     conn_timeout,
+        ///     conn_tries,
+        ///     conn_wait,
+        /// }
+	/// lamp.connect(conn_settings)?;
 	/// ```
 	///
 	/// Initially, the function will enter a loop where it attempts to connect to the lamp.
