@@ -32,7 +32,7 @@ impl From<LampStateChange> for Command {
 */
 
 impl LampColorState {
-        /// Consume the current LampColorState and output a new LampColorState.
+	/// Consume the current LampColorState and output a new LampColorState.
 	pub fn do_change(self, change: LampStateChange) -> io::Result<Self> {
 		type Chan = LampStateChange;
 		match (self, change) {
@@ -46,9 +46,9 @@ impl LampColorState {
 		}
 	}
 
-        // TODO maybe add some method that takes &self and a LampStateChange
-        // and outputs a tuple consisting of a new LampColorState
-        // together with the Command needed to get to this state
+	// TODO maybe add some method that takes &self and a LampStateChange
+	// and outputs a tuple consisting of a new LampColorState
+	// together with the Command needed to get to this state
 }
 
 #[derive(Debug)]

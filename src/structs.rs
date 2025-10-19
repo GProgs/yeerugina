@@ -1,4 +1,4 @@
-use color::{OpaqueColor, Rgba8};
+use color::{ColorSpace, OpaqueColor, Rgba8, Srgb};
 use log::debug;
 use serde::Deserialize;
 use std::net::SocketAddr;
@@ -106,7 +106,7 @@ impl LampConfig {
 		ConnectionSettings {
 			read_timeout: self.read_timeout,
 			write_timeout: self.write_timeout,
-			conn_timeout: self.connection_timeout,
+			conn_timeout: Some(self.connection_timeout),
 			conn_tries: self.connection_tries,
 			conn_wait: self.connection_tries_wait,
 		}
@@ -186,6 +186,29 @@ pub enum Effect {
 	Smooth,
 }
 
+// I'm sorry for this clusterduck.
+// OpaqueColor<CS> doesn't implement PartialEq, Eq, or Default
+// which are all needed for strum_macros::EnumString
+#[derive(Clone, Debug)]
+struct OpaqueColorWrapper<CS> {
+    color: OpaqueColor<CS>
+}
+
+impl<CS: ColorSpace> PartialEq for OpaqueColorWrapper<CS> {
+    fn eq(&self, other: &Self) -> bool {
+        self.color.components == other.color.components &&
+            self.color.cs == other.color.cs
+    }
+}
+
+impl<CS: ColorSpace> Eq for OpaqueColorWrapper<CS> {}
+
+impl<CS: ColorSpace> Default for OpaqueColorWrapper<CS> {
+    fn default() -> Self {
+        OpaqueColorWrapper { color: OpaqueColor::BLACK }
+    }
+}
+
 /// Enum that contains all possible commands supported by YeeLight lamps.
 ///
 /// Note that parsing logic is NOT included in the Command enum. Instead, the user is responsible
@@ -203,7 +226,7 @@ pub enum Command {
 	/// Set the color of the lamp by hue and saturation.
 	SetHsv(u8, u8),
 	/// Additional command: Set the color of the lamp by passing in an OpaqueColor.
-	SetOpaqueColor(OpaqueColor),
+	SetOpaqueColor(OpaqueColorWrapper<Srgb>), // this doesn't implement PartialEq or Eq
 	/// Set the brightness of the lamp in percentages.
 	SetBright(u8),
 	/// TODO write documentation here
@@ -227,18 +250,18 @@ impl Command {
 			// Convert OpaqueColor to r,g,b values
 			// combine them with u32::from_be_bytes
 			// and recurse back thru SetRgb enum
-			Command::SetOpaqueColor(col) => {
+			Command::SetOpaqueColor(col_wrap) => {
 				//let rgba: Rgba8 = col.to_rgba8();
 				let Rgba8 {
 					r: red,
 					g: green,
 					b: blue,
 					a: _,
-				} = col.to_rgba8();
+				} = col_wrap.color.to_rgba8();
 				//let rgb: u32 = (red << 16) + (green << 8) + blue;
 				let rgb = u32::from_be_bytes([0x0, red, green, blue]);
-				let rgb_cmd = Command::SetRgb(rgb, eff, dur);
-				rgb_cmd.to_request(id)
+				let rgb_cmd = Command::SetRgb(rgb);
+				rgb_cmd.to_request(id,eff,dur)
 			},
 			Command::SetBright(bri) => format!(r#"{},"{}",{}"#, bri, eff, dur),
 			/*

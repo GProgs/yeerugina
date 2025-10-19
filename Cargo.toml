@@ -10,10 +10,12 @@ env_logger = "0.11.8"
 humantime = "2.3.0"
 humantime-serde = "1.1.1"
 log = "0.4.28"
-#paho-mqtt = "0.13.3"
-paho-mqtt = { version = "0.13.3", features = ["build_bindgen","vendored-ssl"] }
+paho-mqtt = { version = "0.13.3", features = ["build_bindgen","vendored-ssl"], optional = true }
 regex = "1.11.2"
 serde = { version = "1.0.228", features = ["derive"] }
 strum = "0.27.2"
 strum_macros = "0.27.2"
 toml = { version = "0.9.7", features = ["parse"] }
+
+[features]
+default = []
