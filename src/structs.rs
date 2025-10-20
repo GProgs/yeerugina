@@ -106,7 +106,7 @@ impl LampConfig {
 		ConnectionSettings {
 			read_timeout: self.read_timeout,
 			write_timeout: self.write_timeout,
-			conn_timeout: Some(self.connection_timeout),
+			conn_timeout: self.connection_timeout,
 			conn_tries: self.connection_tries,
 			conn_wait: self.connection_tries_wait,
 		}
@@ -163,7 +163,7 @@ pub struct ConnectionSettings {
 	/// Write timeout for TcpStream
 	pub write_timeout: OptDuration,
 	/// Connection timeout for TcpStream::connect_timeout()
-	pub conn_timeout: OptDuration,
+	pub conn_timeout: Duration,
 	/// How many times to attempt to connect to the lamp
 	pub conn_tries: u8,
 	/// How long to wait between each connection attempt
@@ -238,6 +238,8 @@ pub enum Command {
 impl Command {
 	/// Convert a Command to a String, given an integer to use as an ID.
 	pub fn to_request(&self, id: u8, eff: &Effect, dur: &Duration) -> String {
+                // Shadow dur (we care only about the millisecond value)
+                let dur = dur.as_millis();
 		// Create a comma-separated list of parameters.
 		// For example, "on","smooth",500
 		// or 60,30,"sudden"
