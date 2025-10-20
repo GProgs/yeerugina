@@ -1,5 +1,8 @@
 use crate::structs::{Command, Effect};
+
+#[cfg(feature = "mqtt")]
 use paho_mqtt::PropertyCode::*;
+#[cfg(feature = "mqtt")]
 use paho_mqtt::{Message, Properties, properties};
 
 /// Parse a paho_mqtt::Message to a Command.
@@ -9,6 +12,7 @@ pub fn parse_mqtt_command(msg: String) -> Result<Command, String> {
 }
 
 /// Create required MQTT properties.
+#[cfg(feature = "mqtt")]
 pub fn mqtt_props() -> Properties {
 	properties![
 		MessageExpiryInterval => 3600,
@@ -18,6 +22,7 @@ pub fn mqtt_props() -> Properties {
 }
 
 /// Convert an i32 to a subscription ID property.
+#[cfg(feature = "mqtt")]
 pub fn sub_id(id: i32) -> Properties {
 	properties![
 			SubscriptionIdentifier => id

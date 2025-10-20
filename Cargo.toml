@@ -19,3 +19,4 @@ toml = { version = "0.9.7", features = ["parse"] }
 
 [features]
 default = []
+mqtt = ["paho-mqtt"]
