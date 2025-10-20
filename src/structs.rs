@@ -2,8 +2,10 @@ use color::{ColorSpace, OpaqueColor, Rgba8, Srgb};
 use log::debug;
 use serde::Deserialize;
 use std::net::SocketAddr;
+use std::str::FromStr;
 use std::time::Duration;
 use strum_macros;
+use strum_macros::EnumString;
 
 /* TODO list here:
  * - Integrate OpaqueColor into our ecosystem better
@@ -191,44 +193,45 @@ pub enum Effect {
 // which are all needed for strum_macros::EnumString
 #[derive(Clone, Debug)]
 struct OpaqueColorWrapper<CS> {
-    color: OpaqueColor<CS>
+	color: OpaqueColor<CS>,
 }
 
 impl<CS: ColorSpace> PartialEq for OpaqueColorWrapper<CS> {
-    fn eq(&self, other: &Self) -> bool {
-        self.color.components == other.color.components &&
-            self.color.cs == other.color.cs
-    }
+	fn eq(&self, other: &Self) -> bool {
+		self.color.components == other.color.components && self.color.cs == other.color.cs
+	}
 }
 
 impl<CS: ColorSpace> Eq for OpaqueColorWrapper<CS> {}
 
 impl<CS: ColorSpace> Default for OpaqueColorWrapper<CS> {
-    fn default() -> Self {
-        OpaqueColorWrapper { color: OpaqueColor::BLACK }
-    }
+	fn default() -> Self {
+		OpaqueColorWrapper {
+			color: OpaqueColor::BLACK,
+		}
+	}
 }
 
 /// Enum that contains all possible commands supported by YeeLight lamps.
 ///
 /// Note that parsing logic is NOT included in the Command enum. Instead, the user is responsible
 /// for parsing any Strings to Commands. See mqtt.rs.
-#[derive(Clone, Debug, PartialEq, Eq, strum_macros::Display, strum_macros::EnumString)]
+#[derive(Clone, Debug, PartialEq, Eq, strum_macros::Display, EnumString)]
 #[strum(serialize_all = "snake_case")]
-pub enum Command {
+enum Command { // TODO create a newtype struct containing only InnerCommand
 	/// Get properties of the lamp (i.e. current color temperature, brightness...)
 	GetProp(Vec<String>),
 	/// Set the color temperature of the lamp.
-	SetCtAbx(u16),
+	SetCtAbx(usize),
 	/// Set the color of the lamp using a 24 bit hexadecimal value.
 	/// 0xRRGGBB
-	SetRgb(u32),
+	SetRgb(usize),
 	/// Set the color of the lamp by hue and saturation.
-	SetHsv(u8, u8),
+	SetHsv(usize, usize),
 	/// Additional command: Set the color of the lamp by passing in an OpaqueColor.
 	SetOpaqueColor(OpaqueColorWrapper<Srgb>), // this doesn't implement PartialEq or Eq
 	/// Set the brightness of the lamp in percentages.
-	SetBright(u8),
+	SetBright(usize),
 	/// TODO write documentation here
 	//SetPower(bool, Effect, usize, Option<usize>),
 	/// Toggle the state of the lamp (i.e. off -> on, on -> off)
@@ -236,19 +239,47 @@ pub enum Command {
 }
 
 impl Command {
+        /// Create a new Command::SetCtAbx enum.
+        pub fn new_ct_abx(val: usize) -> Result<Self,String> {
+            if (val < 1000) | (val > 7000) { // TODO get the actual values
+                Err(String::from("Color temperature out of bounds"))
+            } else {
+                Ok(Self::SetCtAbx(val))
+            }
+        }
+
+        pub fn new_rgb(val: usize) -> Result<Self,String> {
+            if val > 0xFFFFFF { // TODO get the actual values
+                Err(String::from("Invalid RGB value; must be less than 0xFFFFFF"))
+            } else {
+                Ok(Self::SetRgb(val))
+            }
+        }
+
+        pub fn new_hsv(hue: usize, sat: usize) -> Result<Self,String> {
+            if (hue > 255) | (sat > 255) { // TODO get the actual values
+                Err(String::from("Hue and/or saturation out of bounds"))
+            } else {
+                Ok(Self::SetHsv(hue,sat))
+            }
+        }
+
+        // TODO finish the rest of the new_ methods
+
 	/// Convert a Command to a String, given an integer to use as an ID.
 	pub fn to_request(&self, id: u8, eff: &Effect, dur: &Duration) -> String {
-                // Shadow dur (we care only about the millisecond value)
-                let dur = dur.as_millis();
+		// Shadow dur (we care only about the millisecond value)
+		//let dur = dur.as_millis();
 		// Create a comma-separated list of parameters.
 		// For example, "on","smooth",500
 		// or 60,30,"sudden"
 		// If a method does NOT expect parameters, use an EMPTY STRING.
 		let param_part: String = match self {
 			Command::GetProp(params) => format!("\"{}\"", params.join("\",\"")), // quotes
-			Command::SetCtAbx(ct_val) => format!(r#"{},"{}",{}"#, ct_val, eff, dur),
-			Command::SetRgb(rgb) => format!(r#"{},"{}",{}"#, rgb, eff, dur),
-			Command::SetHsv(hue, sat) => format!(r#"{},{},"{}",{}"#, hue, sat, eff, dur),
+			Command::SetCtAbx(val) | Command::SetRgb(val) | Command::SetBright(val) => format!(r#"{},"{}",{}"#, val, eff, dur.as_millis()),
+                        //Command::SetCtAbx(ct_val) => format!(r#"{},"{}",{}"#, ct_val, eff, dur),
+			//Command::SetRgb(rgb) => format!(r#"{},"{}",{}"#, rgb, eff, dur),
+			Command::SetHsv(hue, sat) => format!(r#"{},{},"{}",{}"#, hue, sat, eff, dur.as_millis()),
 			// Convert OpaqueColor to r,g,b values
 			// combine them with u32::from_be_bytes
 			// and recurse back thru SetRgb enum
@@ -261,11 +292,11 @@ impl Command {
 					a: _,
 				} = col_wrap.color.to_rgba8();
 				//let rgb: u32 = (red << 16) + (green << 8) + blue;
-				let rgb = u32::from_be_bytes([0x0, red, green, blue]);
+				let rgb = u32::from_be_bytes([0x0, red, green, blue]) as usize;
 				let rgb_cmd = Command::SetRgb(rgb);
-				rgb_cmd.to_request(id,eff,dur)
+				rgb_cmd.to_request(id, eff, dur)
 			},
-			Command::SetBright(bri) => format!(r#"{},"{}",{}"#, bri, eff, dur),
+			//Command::SetBright(bri) => format!(r#"{},"{}",{}"#, bri, eff, dur),
 			/*
 						Command::SetPower(pow, eff, dur, maybe_mod) => {
 				// handle optional

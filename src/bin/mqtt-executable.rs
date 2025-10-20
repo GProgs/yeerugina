@@ -143,5 +143,5 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 #[cfg(not(feature = "mqtt"))]
 fn main() {
-    eprintln!("Please enable the 'mqtt' feature flag and try again.");
+	eprintln!("Please enable the 'mqtt' feature flag and try again.");
 }
