@@ -1,13 +1,13 @@
 //use ctrlc;
 use log::{debug, error, info, warn};
-#[cfg(feature = "mqtt")]
-use {
-    paho_mqtt as mqtt,
-    yeerugina::mqtt::{mqtt_props, parse_mqtt_command, sub_id},
-};
 use yeerugina::cmd::Command;
 use yeerugina::config::Config;
 use yeerugina::lamp::Lamp;
+#[cfg(feature = "mqtt")]
+use {
+	paho_mqtt as mqtt,
+	yeerugina::mqtt::{mqtt_props, parse_mqtt_command, sub_id},
+};
 
 #[cfg(feature = "mqtt")]
 fn main() -> Result<(), Box<dyn std::error::Error>> {

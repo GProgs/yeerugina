@@ -33,7 +33,7 @@ impl Effect {
 			None => Effect(EffectInner::Sudden),
 			Some(dur) if dur.is_zero() => Effect(EffectInner::Sudden),
 			Some(dur) if dur.as_millis() < 30 => {
-                                info!("Clamped smooth effect duration to 30 ms");
+				info!("Clamped smooth effect duration to 30 ms");
 				Effect(EffectInner::Smooth(Duration::from_millis(30)))
 			},
 			Some(dur) => Effect(EffectInner::Smooth(dur)),
@@ -45,15 +45,15 @@ impl Effect {
 // "sudden" or "smooth",1234 for example.
 // We didn't use strum_macros::Display since we want to print the duration as well.
 impl fmt::Display for Effect {
-        /// Print the effect (and duration, if applicable).
-        ///
-        /// Example:
-        /// ```
-        /// let slow_transition = Effect::new(Some(Duration::from_millis(2345)));
-        /// println!("Here's my slow transition! {}",slow_transition);
-        /// let instant = Effect::new(None);
-        /// println!("Look, this is fast! {}",instant);
-        /// ```
+	/// Print the effect (and duration, if applicable).
+	///
+	/// Example:
+	/// ```
+	/// let slow_transition = Effect::new(Some(Duration::from_millis(2345)));
+	/// println!("Here's my slow transition! {}",slow_transition);
+	/// let instant = Effect::new(None);
+	/// println!("Look, this is fast! {}",instant);
+	/// ```
 	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
 		match self.0 {
 			EffectInner::Sudden => write!(f, "\"sudden\""),
@@ -77,17 +77,16 @@ pub enum ValueKind {
 }
 
 impl Value {
-
-        /// Get the allowed range of values for each type of value.
-        ///
-        /// This function is meant primarily for input validation by
-        /// Value::new (which is a public function).
-        ///
-        /// Example:
-        /// ```
-        /// Value::limit(ValueKind::Bright)
-        /// ``` will indicate that a valid brightness
-        /// value must be between 0 and 100 (incl. ends).
+	/// Get the allowed range of values for each type of value.
+	///
+	/// This function is meant primarily for input validation by
+	/// Value::new (which is a public function).
+	///
+	/// Example:
+	/// ```
+	/// Value::limit(ValueKind::Bright)
+	/// ``` will indicate that a valid brightness
+	/// value must be between 0 and 100 (incl. ends).
 	pub fn limit(kind: ValueKind) -> std::ops::RangeInclusive<u32> {
 		match kind {
 			ValueKind::ColorTemp => 1700..=6500,
@@ -98,14 +97,14 @@ impl Value {
 		}
 	}
 
-        /// Create a new Value struct.
-        ///
-        /// If successful, the function returns a Value, otherwise it will return an error string.
-        /// Example:
-        /// ```
-        /// let my_color = 0xDEAD67u32;
-        /// let my_value = Value::new(my_color,ValueKind::Rgb)?;
-        /// ```
+	/// Create a new Value struct.
+	///
+	/// If successful, the function returns a Value, otherwise it will return an error string.
+	/// Example:
+	/// ```
+	/// let my_color = 0xDEAD67u32;
+	/// let my_value = Value::new(my_color,ValueKind::Rgb)?;
+	/// ```
 	pub fn new(val: u32, kind: ValueKind) -> Result<Self, String> {
 		let lim = Value::limit(kind);
 		if lim.contains(&val) {
@@ -124,12 +123,12 @@ impl Value {
 		}
 	}
 
-        /// Get the u32 value contained within the Value struct.
+	/// Get the u32 value contained within the Value struct.
 	pub fn get(&self) -> u32 {
 		self.0
 	}
 
-        /// Get the ValueKind contained within the Value struct.
+	/// Get the ValueKind contained within the Value struct.
 	pub fn get_kind(&self) -> ValueKind {
 		self.1
 	}
@@ -139,13 +138,13 @@ impl Value {
 ///
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Command {
-        /// Type of the command.
+	/// Type of the command.
 	kind: CommandKind,
-        /// The main parameter of the command. Ignored when using CommandKind::Toggle.
+	/// The main parameter of the command. Ignored when using CommandKind::Toggle.
 	param_1: Value,
-        /// Optional second parameter. Ignored for other commands except CommandKind::SetHsv.
+	/// Optional second parameter. Ignored for other commands except CommandKind::SetHsv.
 	param_2: Option<Value>,
-        /// Transition effect and its speed, if smooth.
+	/// Transition effect and its speed, if smooth.
 	effect: Effect,
 }
 
@@ -164,19 +163,18 @@ pub enum CommandKind {
 }
 
 impl Command {
-
-    /// Convert a Command to a String, given an integer to use as an ID.
+	/// Convert a Command to a String, given an integer to use as an ID.
 	pub fn to_request(&self, id: u8) -> String {
-                // For reference:
-                // Effect has a custom Display impl
-                // CommandKind has a Display impl from strum
-                
+		// For reference:
+		// Effect has a custom Display impl
+		// CommandKind has a Display impl from strum
+
 		let param_part: String = match self.kind {
-                        // Dyadic command
+			// Dyadic command
 			CommandKind::SetHsv => {
-                                if self.param_2.is_none() {
-                                    info!("Saturation missing; assuming 100");
-                                }
+				if self.param_2.is_none() {
+					info!("Saturation missing; assuming 100");
+				}
 				format!(
 					r#"{},{},{}"#,
 					self.param_1.get(),
@@ -185,7 +183,7 @@ impl Command {
 				)
 			},
 			CommandKind::Toggle => String::new(),
-                        // Handle monadic commands here
+			// Handle monadic commands here
 			_ => format!(r#"{},{}"#, self.param_1.get(), self.effect),
 		};
 		format!(

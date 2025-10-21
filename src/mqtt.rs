@@ -2,8 +2,8 @@ use crate::cmd::{Command, Effect};
 
 #[cfg(feature = "mqtt")]
 use {
-    paho_mqtt::PropertyCode::*,
-    paho_mqtt::{Message, Properties, properties};
+	paho_mqtt::PropertyCode::*,
+	paho_mqtt::{Message, Properties, properties},
 };
 
 /// Parse a paho_mqtt::Message to a Command.
