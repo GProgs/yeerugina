@@ -12,33 +12,52 @@ use strum_macros;
 // Please derive Clone, Copy, Debug, PartialEq, Eq
 // and maybe Default as well if you can.
 
+/// A public struct used to indicate how the lamp should run this command.
+///
+/// New Effects are constructed by calling Effect::new_smooth(dur: Duration) for smooth transitions and
+/// Effect::new_sudden() for sudden transitions. Please note that the Default is Effect(Sudden).
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub struct Effect(EffectInner);
 
+/// A private enum that is wrapped by Effect.
+///
+/// This enum is private as there is a minimum value for the Duration contained in
+/// EffectInner::Smooth (eq. 30 milliseconds). External users are not expected to instantiate these
+/// enums directly. Instead, use the wrapper and its constructor functions Effect::new_smooth() and
+/// Effect::new_sudden().
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 enum EffectInner {
+        /// A transition that takes place immediately (i.e. without delay).
 	#[default]
 	Sudden,
+        /// A transition that takes place over some time (i.e. smooth fade from red to blue).
 	Smooth(Duration),
 }
 
 impl Effect {
-	/// Create a new Effect from an optional Duration.
+	/// Create a new Smooth Effect from a Duration.
 	///
-	/// If mb_dur is None or zero value, the Effect returned will be Sudden.
-	/// For mb_dur with Some(duration), the Effect returned will be Smooth with a duration of
-	/// max(30 ms, duration), so the minimum value of the duration is 30 milliseconds.
-	pub fn new(mb_dur: Option<Duration>) -> Self {
-		match mb_dur {
-			None => Effect(EffectInner::Sudden),
-			Some(dur) if dur.is_zero() => Effect(EffectInner::Sudden),
-			Some(dur) if dur.as_millis() < 30 => {
+	/// If dur is zero value, the Effect returned will be Sudden.
+	/// Otherwise, dur is used directly. However, if its value is less than 30 milliseconds,
+        /// the value will be clamped to 30 milliseconds.
+	pub fn new_smooth(dur: Duration) -> Self {
+		match dur {
+			_ if dur.is_zero() => {
+                            info!("Zero duration converted to sudden effect");
+                            Effect(EffectInner::Sudden)
+                        },
+			_ if dur.as_millis() < 30 => {
 				info!("Clamped smooth effect duration to 30 ms");
 				Effect(EffectInner::Smooth(Duration::from_millis(30)))
 			},
-			Some(dur) => Effect(EffectInner::Smooth(dur)),
+			_ => Effect(EffectInner::Smooth(dur)),
 		}
 	}
+
+        /// Create a Sudden Effect.
+        ///
+        /// This function is quite trivial. It just creates a struct containing the Sudden value.
+        pub fn new_sudden() -> Self { Effect(EffectInner::Sudden) }
 }
 
 // Implementation for Effect will print out either
@@ -62,17 +81,48 @@ impl fmt::Display for Effect {
 	}
 }
 
+/// A public struct to indicate some kind of property of the lamp.
+///
+/// The first element of the tuple struct contains the value (i.e. color temperature in kelvins or RGB value -> 4500u32 or 0xDEAD67u32)
+/// while the second element indicates the type of the value (see above).
+///
+/// Values are instantiated using Value::new(), which takes in both the numerical value and the
+/// type of value (ValueKind).
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Value(u32, ValueKind);
 
+/// A public enum describing the different types of properties.
+///
+/// The names of the enums should be trivial.
+///
+/// However, an additional note on ValueKind::Hue and ValueKind::Sat is in order. While one could
+/// describe hue and saturation using (u32,u32), this would lead to the inevitable necessity of
+/// generics. In order to avoid having to deal with generics, it was conciously desided to separate
+/// the two values into their own ValueKinds. This division will be reflected down the line as the
+/// necessity of having two separate fields in Command.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 //#[strum_discriminants(vis(pub))]
 //#[strum_discriminants(name(ValueKind))]
 pub enum ValueKind {
+        /// Color temperature of the lamp in kelvins. Must be within 1700-6500 K (inclusive).
 	ColorTemp,
+        /// RGB value of the lamp. Must be within 0x0 ..= 0xFFFFFF.
+        ///
+        /// Using big-endian notation, the first byte needs to be zero. The second byte conveys the red value, ranging from 0x00 (eq. decimal 0) to 0xFF (eq. decimal 255). The third and fourth bytes convey the green and blue values respectively.
+        ///
+        /// That is, the RGB value as a u32 would be of the form 0x00rrggbb, where r,g,b are the
+        /// red,green,blue values respectively. As a little hint, the function u32::from_be_bytes()
+        /// can be of use when constructing the RGB value from individual red, green, and blue
+        /// components.
 	Rgb,
+        /// The hue in the HSV system. Must be within 0-359 (inclusive). Use together with
+        /// ValueKind::Sat.
 	Hue,
+        /// The saturation in the HSV system. Must be within 0-100 (inclusive). Use together with
+        /// ValueKind::Hue.
 	Sat,
+        /// The brightness of the lamp in percent. Must be within 0-100 (inclusive). This can be
+        /// used independently of the other ValueKinds, as this controls brightness, not color.
 	Bright,
 }
 
@@ -154,11 +204,25 @@ pub struct Command {
 #[derive(Clone, Copy, Debug, PartialEq, Eq, strum_macros::Display)]
 #[strum(serialize_all = "snake_case")]
 pub enum CommandKind {
+        /// Set the color temperature of the lamp.
 	SetCtAbx,
+        /// Set the lamp to some color described with RGB.
 	SetRgb,
+        /// Set the lamp to some color described with the HSV system.
+        ///
+        /// When using CommandKind::SetHsv, populate the param_1 and param_2 fields of Command with
+        /// a Value with ValueKind::Hue, and a Some(Value) with ValueKind::Sat. In the absence of a
+        /// value for param_2, a saturation of 100 will be used by default.
 	SetHsv,
+        /// Set the brightness of the lamp.
+        ///
+        /// This will not overwrite the color currently present on the lamp - it adjusts the
+        /// brightness of the lamp, making it brighter or darker.
 	SetBright,
 	//SetPower,
+        /// Toggle the lamp on and off.
+        ///
+        /// If the lamp is on, turns it off. If the lamp is off, turns it on.
 	Toggle,
 }
 
@@ -182,6 +246,7 @@ impl Command {
 					self.effect,
 				)
 			},
+                        // Command with no arguments
 			CommandKind::Toggle => String::new(),
 			// Handle monadic commands here
 			_ => format!(r#"{},{}"#, self.param_1.get(), self.effect),
