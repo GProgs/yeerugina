@@ -1,4 +1,5 @@
-use crate::structs::{Command, ConnectionSettings, Effect};
+use crate::cmd::{Command, Effect};
+use crate::config::ConnectionSettings;
 use log::{debug, info, trace, warn};
 use regex::bytes::Regex;
 use std::io;
@@ -189,7 +190,7 @@ impl Lamp {
 		let id = self.cmd_count;
 		debug!("{} Command ID {id}", self.name);
 		// Construct message bytes
-		let req = cmd.to_request(id, &self.effect, &self.duration);
+		let req: String = cmd.to_request(id);
 		let byte_arr: &[u8] = req.as_bytes();
 		// Output and increment counter
 		trace!("{} | Writing bytes to TcpStream", self.name);

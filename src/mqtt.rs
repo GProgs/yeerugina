@@ -1,9 +1,10 @@
-use crate::structs::{Command, Effect};
+use crate::cmd::{Command, Effect};
 
 #[cfg(feature = "mqtt")]
-use paho_mqtt::PropertyCode::*;
-#[cfg(feature = "mqtt")]
-use paho_mqtt::{Message, Properties, properties};
+use {
+    paho_mqtt::PropertyCode::*,
+    paho_mqtt::{Message, Properties, properties};
+};
 
 /// Parse a paho_mqtt::Message to a Command.
 /// Returns either the command or a failure message as a String.

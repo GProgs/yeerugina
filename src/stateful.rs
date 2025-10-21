@@ -1,7 +1,8 @@
 use crate::lamp::Lamp;
-use crate::structs::Command;
+use crate::cmd::Command;
 use std::io;
 
+#[derive(Debug)]
 enum LampColorState {
 	RGB(u32),
 	ColorTemp(usize),
