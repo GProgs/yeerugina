@@ -1,4 +1,4 @@
-use crate::cmd::{Command, Effect};
+use crate::cmd::Command;
 
 #[cfg(feature = "mqtt")]
 use {

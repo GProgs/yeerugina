@@ -135,7 +135,8 @@ impl Value {
 	/// Example:
 	/// ```
 	/// Value::limit(ValueKind::Bright)
-	/// ``` will indicate that a valid brightness
+	/// ```
+        /// will indicate that a valid brightness
 	/// value must be between 0 and 100 (incl. ends).
 	pub fn limit(kind: ValueKind) -> std::ops::RangeInclusive<u32> {
 		match kind {

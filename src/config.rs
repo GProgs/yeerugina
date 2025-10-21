@@ -1,11 +1,8 @@
-use color::{ColorSpace, OpaqueColor, Rgba8, Srgb};
 use log::debug;
 use serde::Deserialize;
 use std::net::SocketAddr;
-use std::str::FromStr;
 use std::time::Duration;
 use strum_macros;
-use strum_macros::EnumString;
 
 /* TODO list here:
  * - Integrate OpaqueColor into our ecosystem better
