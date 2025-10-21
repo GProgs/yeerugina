@@ -218,6 +218,8 @@ impl<CS: ColorSpace> Default for OpaqueColorWrapper<CS> {
 /// for parsing any Strings to Commands. See mqtt.rs.
 #[derive(Clone, Debug, PartialEq, Eq, strum_macros::Display, EnumString)]
 #[strum(serialize_all = "snake_case")]
+// TODO either do newtype struct or just don't overcomplicate stuff and have the MQTT parser deal
+// with creating each enum... but we cannot verify the values cos enums are public
 enum Command { // TODO create a newtype struct containing only InnerCommand
 	/// Get properties of the lamp (i.e. current color temperature, brightness...)
 	GetProp(Vec<String>),
