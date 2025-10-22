@@ -1,4 +1,4 @@
-use crate::cmd::{Command, Effect};
+use crate::cmd::Command;
 use crate::config::ConnectionSettings;
 use log::{debug, info, trace, warn};
 use regex::bytes::Regex;
@@ -27,8 +27,6 @@ use std::time::Duration;
 #[derive(Debug)]
 pub struct Lamp {
 	name: String,
-	effect: Effect,
-	duration: Duration,
 	ip: SocketAddr,
 	stream: Option<TcpStream>,
 	cmd_count: u8,
@@ -49,19 +47,15 @@ impl Lamp {
 	/// let mut lamp = Lamp::new(
 	///     String::from("Livingroom"),
 	///     String::from("192.168.1.3:55443"),
-	///     Effect::default(),
-	///     Duration::from_millis(1500)
 	/// );
 	/// ```
 	pub fn new(
-		name: String, ip_str: String, effect: Effect, duration: Duration,
+		name: String, ip_str: String,
 	) -> Result<Self, AddrParseError> {
 		trace!("{} | Creating a new lamp", name);
 		let ip: SocketAddr = ip_str.parse()?;
 		Ok(Self {
 			name,
-			effect,
-			duration,
 			ip,
 			stream: None,
 			cmd_count: 0u8,
@@ -228,7 +222,7 @@ impl Lamp {
 	/// (for example, when using set_rgb or toggle)
 	/// Ok(String) if get_prop was called and we got values back
 	/// Err(String) if something went wrong
-	pub fn parse_response(resp: &[u8]) -> Result<Option<String>, String> {
+	pub fn parse_response(_resp: &[u8]) -> Result<Option<String>, String> {
 		todo!()
 		//let Ok(re) = Regex::new(todo!()) else {
 		//	return Err(String::from("Could not create regex"));
