@@ -1,6 +1,6 @@
 use crate::cmd::Command;
 use crate::config::ConnectionSettings;
-use log::{debug, info, trace, warn};
+use log::{debug, error, info, trace, warn};
 use regex::bytes::Regex;
 use std::io;
 use std::io::Write;
@@ -49,9 +49,7 @@ impl Lamp {
 	///     String::from("192.168.1.3:55443"),
 	/// );
 	/// ```
-	pub fn new(
-		name: String, ip_str: String,
-	) -> Result<Self, AddrParseError> {
+	pub fn new(name: String, ip_str: String) -> Result<Self, AddrParseError> {
 		trace!("{} | Creating a new lamp", name);
 		let ip: SocketAddr = ip_str.parse()?;
 		Ok(Self {
@@ -184,7 +182,17 @@ impl Lamp {
 		let id = self.cmd_count;
 		debug!("{} Command ID {id}", self.name);
 		// Construct message bytes
-		let req: String = cmd.to_request(id);
+		let mb_req: Result<String, String> = cmd.to_request(id);
+		//if let Err(&e) = mb_req {
+		//    error!("{} | Could not construct request: {}",self.name,&e);
+		//};
+		let Ok(req) = mb_req else {
+			let e = mb_req.expect_err("Expected Result to be Err(_)");
+			error!("{} | Could not construct request String: {}", self.name, e);
+			return Err(io::Error::other(
+				"Failed to construct request String"
+			));
+		};
 		let byte_arr: &[u8] = req.as_bytes();
 		// Output and increment counter
 		trace!("{} | Writing bytes to TcpStream", self.name);
