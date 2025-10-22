@@ -189,9 +189,7 @@ impl Lamp {
 		let Ok(req) = mb_req else {
 			let e = mb_req.expect_err("Expected Result to be Err(_)");
 			error!("{} | Could not construct request String: {}", self.name, e);
-			return Err(io::Error::other(
-				"Failed to construct request String"
-			));
+			return Err(io::Error::other("Failed to construct request String"));
 		};
 		let byte_arr: &[u8] = req.as_bytes();
 		// Output and increment counter
