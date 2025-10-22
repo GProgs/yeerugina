@@ -233,7 +233,9 @@ impl CommandKind {
 	/// Get the ValueKinds associated with this CommandKind.
 	///
 	/// The first element of the array corresponds to param_1 in Command, and the same for the
-	/// second element. None means that there is no related parameter.
+	/// second element. None means that there is no related parameter. For example, for
+	/// CommandKind::SetCtAbx, the output indicates that the 1st parameter should be a color
+	/// temperature value, while the second parameter field should not be populated.
 	pub fn associated(&self) -> [Option<ValueKind>; 2] {
 		match self {
 			CommandKind::SetCtAbx => [Some(ValueKind::ColorTemp), None],
@@ -253,12 +255,37 @@ impl Command {
 
 	/// Determine whether the command is consistent (i.e. the parameters within correspond with
 	/// the CommandKind::associated().
+	///
+	/// As an example, if the command is supposed to be 'set_ct_abx', but contains an RGB
+	/// value, this function will return false. In layman's terms, this function ensures that
+	/// the correct type of data is used for the command.
 	pub fn is_consistent(&self) -> bool {
 		let expected = self.associated(); // what we expect to have
 		let get_kind = |p: Option<Value>| p.map(|p1| p1.get_kind());
 		// what we actually have
 		let actual = [get_kind(self.param_1), get_kind(self.param_2)];
 		expected == actual
+	}
+
+	/// Create a new Command from the given parameters.
+	///
+	/// This function is essentially a wrapper for the direct construction. The function checks
+	/// the consistency of the data (i.e. the correct data is present for the given
+	/// CommandKind), and assuming this passes, returns a Command.
+	pub fn new(
+		kind: CommandKind, param_1: Option<Value>, param_2: Option<Value>, effect: Effect,
+	) -> Result<Self, String> {
+		// Construct an unverified struct
+		let command = Self {
+			kind,
+			param_1,
+			param_2,
+			effect,
+		};
+		if !command.is_consistent() {
+			return Err(String::from("Inconsistent data given to constructor"));
+		}
+		Ok(command)
 	}
 
 	/// Convert a Command to a String, given an integer to use as an ID.
