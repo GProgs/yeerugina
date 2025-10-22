@@ -8,7 +8,7 @@ use {
 
 /// Parse a paho_mqtt::Message to a Command.
 /// Returns either the command or a failure message as a String.
-pub fn parse_mqtt_command(msg: String) -> Result<Command, String> {
+pub fn parse_mqtt_command(_msg: String) -> Result<Command, String> {
 	todo!()
 }
 

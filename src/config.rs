@@ -2,7 +2,6 @@ use log::debug;
 use serde::Deserialize;
 use std::net::SocketAddr;
 use std::time::Duration;
-use strum_macros;
 
 /* TODO list here:
  * - Integrate OpaqueColor into our ecosystem better
@@ -153,15 +152,15 @@ impl Config {
 }
 
 /// A struct containing settings that is passed to Lamp::connect().
-
-type OptDuration = Option<Duration>;
+///
+/// Please refer to LampConfig for a more detailed description of the different timeout values.
 #[derive(Debug)]
 pub struct ConnectionSettings {
 	/// Read timeout for TcpStream
-	pub read_timeout: OptDuration,
+	pub read_timeout: Option<Duration>,
 	/// Write timeout for TcpStream
-	pub write_timeout: OptDuration,
-	/// Connection timeout for TcpStream::connect_timeout()
+	pub write_timeout: Option<Duration>,
+	/// Connection timeout for TcpStream::connect_timeout(); must NOT be zero.
 	pub conn_timeout: Duration,
 	/// How many times to attempt to connect to the lamp
 	pub conn_tries: u8,
