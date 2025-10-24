@@ -314,7 +314,7 @@ impl Command {
 					info!("Saturation missing; assuming 100");
 				}
 				format!(
-					r#"{},{},{}"#,
+					r#"{}, {}, {}"#,
 					self.param_1.expect("Expected Option to be Some(_)").get(),
 					self.param_2.map_or(100, |p| p.get()),
 					self.effect,
@@ -330,7 +330,7 @@ impl Command {
 					return Err(emsg.to_string());
 				}
 				format!(
-					r#"{},{}"#,
+					r#"{}, {}"#,
 					self.param_1.expect("Expected Option to be Some(_)").get(),
 					self.effect
 				)
