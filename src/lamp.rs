@@ -165,7 +165,10 @@ impl Lamp {
 	/// let cmd = Command::SetRgb(0xdeadfeu32, Effect::Smooth, 2000);
 	/// let cmd_id: u8 = lamp.send_cmd(cmd)?;
 	/// ```
-	pub fn send_cmd(&mut self, cmd: Command) -> io::Result<u8> {
+	pub fn send_cmd(&mut self, cmd: impl Command + std::fmt::Debug) -> io::Result<u8> {
+		// About the signature: "impl" for opaque type, "&dyn" for dyn dispatch
+		// or generic...
+		// Also remove std::fmt::Debug trait bound if we get rid of the debug! call
 		debug!("{} | Attempting to send command {cmd:?}", self.name);
 		// Use stream instead of self.stream later on.
 		// Return io::Error if not connected yet.
@@ -182,15 +185,16 @@ impl Lamp {
 		let id = self.cmd_count;
 		debug!("{} Command ID {id}", self.name);
 		// Construct message bytes
-		let mb_req: Result<String, String> = cmd.to_request(id);
+		let req: String = cmd.request(); // now we don't have Result...
 		//if let Err(&e) = mb_req {
 		//    error!("{} | Could not construct request: {}",self.name,&e);
 		//};
-		let Ok(req) = mb_req else {
-			let e = mb_req.expect_err("Expected Result to be Err(_)");
-			error!("{} | Could not construct request String: {}", self.name, e);
-			return Err(io::Error::other("Failed to construct request String"));
-		};
+
+		//let Ok(req) = mb_req else {
+		//	let e = mb_req.expect_err("Expected Result to be Err(_)");
+		//	error!("{} | Could not construct request String: {}", self.name, e);
+		//	return Err(io::Error::other("Failed to construct request String"));
+		//};
 		let byte_arr: &[u8] = req.as_bytes();
 		// Output and increment counter
 		trace!("{} | Writing bytes to TcpStream", self.name);
