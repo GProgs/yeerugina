@@ -1,4 +1,4 @@
-use crate::cmd::Command;
+use crate::cmd::traits::Command;
 use crate::config::ConnectionSettings;
 use log::{debug, error, info, trace, warn};
 use regex::bytes::Regex;

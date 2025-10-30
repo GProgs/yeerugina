@@ -1,4 +1,4 @@
-use crate::cmd::{CommaPrint, Command};
+use crate::cmd::traits::{CommaPrint, Command};
 
 #[cfg(feature = "mqtt")]
 use {
