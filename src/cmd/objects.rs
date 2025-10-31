@@ -70,7 +70,7 @@ impl fmt::Display for Effect {
 	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
 		match self.0 {
 			EffectInner::Sudden => write!(f, "\"sudden\""),
-			EffectInner::Smooth(dur) => write!(f, "\"smooth\", {}", dur.as_millis()),
+			EffectInner::Smooth(dur) => write!(f, "\"smooth\",{}", dur.as_millis()),
 		}
 	}
 }
