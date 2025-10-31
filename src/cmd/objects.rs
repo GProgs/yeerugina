@@ -2,7 +2,7 @@ use log::info;
 use std::fmt;
 use std::time::Duration;
 
-use crate::cmd::traits::ParamPrint;
+use crate::cmd::traits::ArgsFormatter;
 
 /// A public struct used to indicate how the lamp should run this command.
 ///
@@ -77,7 +77,7 @@ impl fmt::Display for Effect {
 
 pub(in crate::cmd) struct NoData;
 
-pub(in crate::cmd) struct InnerCommand<T: ParamPrint> {
+pub(in crate::cmd) struct InnerCommand<T: ArgsFormatter> {
 	pub id: u8,
 	pub(in crate::cmd) params: T, // trait bound cos we need to print these params
 	pub effect: Effect,
@@ -86,13 +86,13 @@ pub(in crate::cmd) struct InnerCommand<T: ParamPrint> {
 // to limit the creation of these structs.
 // We also want to expose params only to stuff in this module.
 
-impl ParamPrint for NoData {
+impl ArgsFormatter for NoData {
 	fn comma_print(&self) -> String {
 		String::new()
 	}
 }
 
-impl<T: ParamPrint> InnerCommand<T> {
+impl<T: ArgsFormatter> InnerCommand<T> {
 	pub fn inner_request(&self) -> String {
 		let param_part = format!("[{},{}]", self.params.comma_print(), &(self.effect));
 		// Leave the method part as {}, to be filled in by the wrapper
