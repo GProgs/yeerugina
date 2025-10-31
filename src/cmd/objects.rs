@@ -75,26 +75,6 @@ impl fmt::Display for Effect {
 	}
 }
 
-/*
-
-pub struct SetCtAbx {
-	ct: u16,
-}
-
-impl Command for SetCtAbx {
-	type Params = u16;
-
-	fn limit_cond(&self) -> Fn(Params) -> bool {
-		|ct| (1700..=6500).contains(ct)
-	}
-
-	fn request(&self, id: u8) -> String {
-		String::from("this is a test")
-	}
-}
-
-*/
-
 pub(in crate::cmd) struct NoData;
 
 pub(in crate::cmd) struct InnerCommand<T: ParamPrint> {
@@ -105,21 +85,6 @@ pub(in crate::cmd) struct InnerCommand<T: ParamPrint> {
 // One comment about visibility: We're using pub(in crate::cmd)
 // to limit the creation of these structs.
 // We also want to expose params only to stuff in this module.
-
-//impl<T: ParamPrint> InnerCommand<T> {
-/*
-fn new(id: u8, params: T) -> Self {
-	Self { id, params }
-}
-*/
-
-/*
-fn request(&self) -> String {
-	let param_part = format!("{:?}",self.params);
-	todo!()
-}
-*/
-//}
 
 impl ParamPrint for NoData {
 	fn comma_print(&self) -> String {
@@ -137,11 +102,3 @@ impl<T: ParamPrint> InnerCommand<T> {
 		)
 	}
 }
-
-/*
-impl<NoData> InnerCommand<NoData> {
-	fn request(&self) -> String {
-		String::from("dummy")
-	}
-}
-*/

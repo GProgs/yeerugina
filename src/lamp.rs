@@ -186,15 +186,6 @@ impl Lamp {
 		debug!("{} Command ID {id}", self.name);
 		// Construct message bytes
 		let req: String = cmd.request(); // now we don't have Result...
-		//if let Err(&e) = mb_req {
-		//    error!("{} | Could not construct request: {}",self.name,&e);
-		//};
-
-		//let Ok(req) = mb_req else {
-		//	let e = mb_req.expect_err("Expected Result to be Err(_)");
-		//	error!("{} | Could not construct request String: {}", self.name, e);
-		//	return Err(io::Error::other("Failed to construct request String"));
-		//};
 		let byte_arr: &[u8] = req.as_bytes();
 		// Output and increment counter
 		trace!("{} | Writing bytes to TcpStream", self.name);
@@ -234,8 +225,5 @@ impl Lamp {
 	/// Err(String) if something went wrong
 	pub fn parse_response(_resp: &[u8]) -> Result<Option<String>, String> {
 		todo!()
-		//let Ok(re) = Regex::new(todo!()) else {
-		//	return Err(String::from("Could not create regex"));
-		//};
 	}
 }

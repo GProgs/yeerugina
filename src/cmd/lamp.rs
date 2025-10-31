@@ -59,19 +59,3 @@ impl Command for Toggle {
 		true
 	}
 }
-
-// Create constructors that leverage the limit_cond method
-
-/*
-impl SetCtAbx {
-	fn new(id: u8, params: u16) -> Option<Self> {
-		if !(Self::is_valid(&params)) {
-			return None;
-		}
-		Some(Self::from(InnerCommand { id, params }))
-	}
-}
-
-*/
-
-//impl_new!(SetCtAbx,u16);

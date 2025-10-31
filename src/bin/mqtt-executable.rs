@@ -1,6 +1,6 @@
 //use ctrlc;
 use log::{debug, error, info, warn};
-use yeerugina::cmd::Command;
+use yeerugina::cmd::lamp; // lamp commands
 use yeerugina::config::Config;
 use yeerugina::lamp::Lamp;
 #[cfg(feature = "mqtt")]
