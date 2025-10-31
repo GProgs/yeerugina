@@ -13,9 +13,11 @@ log = "0.4.28"
 paho-mqtt = { version = "0.13.3", features = ["build_bindgen","vendored-ssl"], optional = true }
 regex = "1.11.2"
 serde = { version = "1.0.228", features = ["derive"] }
+stringcase = "0.4.0"
 strum = "0.27.2"
 strum_macros = "0.27.2"
 toml = { version = "0.9.7", features = ["parse"] }
+#to_snake_case = "0.1.1"
 
 [features]
 default = []
