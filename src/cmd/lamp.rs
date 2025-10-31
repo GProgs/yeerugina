@@ -7,7 +7,7 @@ use crate::cmd::{
 macro_rules! impl_new {
 	($name:ident,$ty:ty) => {
 		impl $name {
-			fn new(id: u8, params: $ty, effect: Effect) -> Option<Self> {
+			pub fn new(id: u8, params: $ty, effect: Effect) -> Option<Self> {
 				let mby_me = Self(InnerCommand { id, params, effect });
 				if !mby_me.is_valid() {
 					return None;
@@ -20,7 +20,7 @@ macro_rules! impl_new {
 
 // Macro for implementing the getter methods of traits::Command
 macro_rules! impl_getters {
-	() => {
+	($name:ident) => {
 		fn get_method(&self) -> String {
 			stringcase::snake_case(stringify!($name))
 			//stringify!($name).to_snake_case()
@@ -40,21 +40,21 @@ pub struct Toggle(InnerCommand<NoData>);
 impl_new!(Toggle, NoData);
 
 impl Command for SetCtAbx {
-	impl_getters!();
+	impl_getters!(SetCtAbx);
 	fn is_valid(&self) -> bool {
 		(1700..=6500).contains(&self.0.params)
 	}
 }
 
 impl Command for SetHsv {
-	impl_getters!();
+	impl_getters!(SetHsv);
 	fn is_valid(&self) -> bool {
 		(0..360).contains(&self.0.params.0) && (0..=100).contains(&self.0.params.0)
 	}
 }
 
 impl Command for Toggle {
-	impl_getters!();
+	impl_getters!(Toggle);
 	fn is_valid(&self) -> bool {
 		true
 	}
