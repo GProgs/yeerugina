@@ -1,5 +1,5 @@
 use log::info;
-use yeerugina::structs::Config;
+use yeerugina::config::Config;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
 	env_logger::init();

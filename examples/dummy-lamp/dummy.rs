@@ -1,8 +1,7 @@
-use crate::lamp::Lamp;
-use crate::structs::Effect;
 use log::debug;
-use std::time::Duration;
+use yeerugina::lamp::Lamp;
 
+#[derive(Debug)]
 pub struct DummyLamp {
 	// Expose the inner Lamp
 	pub lamp: Lamp,
@@ -10,14 +9,9 @@ pub struct DummyLamp {
 
 impl DummyLamp {
 	pub fn new() -> Self {
-		Self {
-			lamp: Lamp::new(
-				String::from("dummylamp"),
-				String::from("127.0.0.1:6666"),
-				Effect::default(),
-				Duration::from_millis(1500),
-			),
-		}
+		let lamp = Lamp::new(String::from("dummylamp"), String::from("127.0.0.1:6666"))
+			.expect("Could not create lamp");
+		Self { lamp }
 	}
 
 	// Dummy connect method
