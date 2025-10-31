@@ -2,6 +2,8 @@ use log::info;
 use std::fmt;
 use std::time::Duration;
 
+use crate::cmd::traits::ParamPrint;
+
 /// A public struct used to indicate how the lamp should run this command.
 ///
 /// New Effects are constructed by calling Effect::new_smooth(dur: Duration) for smooth transitions and
@@ -93,35 +95,46 @@ impl Command for SetCtAbx {
 
 */
 
-#[derive(Debug)] // TODO write my own impl?
 pub(in crate::cmd) struct NoData;
 
-pub(in crate::cmd) struct InnerCommand<T> {
+pub(in crate::cmd) struct InnerCommand<T: ParamPrint> {
 	pub id: u8,
-	pub(in crate::cmd) params: T,
+	pub(in crate::cmd) params: T, // trait bound cos we need to print these params
+	pub effect: Effect,
 }
 // One comment about visibility: We're using pub(in crate::cmd)
 // to limit the creation of these structs.
+// We also want to expose params only to stuff in this module.
 
-impl<T> InnerCommand<T> {
-	/*
-	fn new(id: u8, params: T) -> Self {
-		Self { id, params }
-	}
-	*/
+//impl<T: ParamPrint> InnerCommand<T> {
+/*
+fn new(id: u8, params: T) -> Self {
+	Self { id, params }
+}
+*/
 
-	/*
-	fn request(&self) -> String {
-		let param_part = format!("{:?}",self.params);
-		todo!()
+/*
+fn request(&self) -> String {
+	let param_part = format!("{:?}",self.params);
+	todo!()
+}
+*/
+//}
+
+impl ParamPrint for NoData {
+	fn comma_print(&self) -> String {
+		String::new()
 	}
-	*/
 }
 
-impl<T: fmt::Debug> InnerCommand<T> {
-	pub fn request(&self) -> String {
-		let param_part = format!("{:?}", self.params);
-		todo!()
+impl<T: ParamPrint> InnerCommand<T> {
+	pub fn inner_request(&self) -> String {
+		let param_part = format!("[{},{}]", self.params.comma_print(), &(self.effect));
+		// Leave the method part as {}, to be filled in by the wrapper
+		format!(
+			r#"{{"id":{0},"method":{{}},"params":{param_part}}}"#,
+			&(self.id)
+		)
 	}
 }
 
